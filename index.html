@@ -380,19 +380,31 @@ td.cell.locked .val{color:var(--ink-mute)}
    区分を増減する場合はこの配列と SUM_ORDER を編集してください。
    ============================================================ */
 const CATEGORIES = [
-  { code:'出',   label:'出勤',        group:'work',  work:1   },
-  { code:'半出', label:'半日出勤',     group:'work',  work:0.5 },
-  { code:'公',   label:'公休',        group:'off',   work:0   },
-  { code:'半休', label:'半日公休',     group:'off',   work:0.5 },
-  { code:'休',   label:'休み',        group:'off',   work:0   },
-  { code:'有',   label:'有給休暇',     group:'leave', work:0   },
-  { code:'半有', label:'半日有給',     group:'leave', work:0.5 },
-  { code:'夏',   label:'夏季休暇',     group:'leave', work:0   },
-  { code:'半夏', label:'半日夏季休暇', group:'leave', work:0.5 },
-  { code:'特',   label:'特別休暇',     group:'leave', work:0   },
-  { code:'慶弔', label:'慶弔休暇',     group:'leave', work:0   },
+  /* 勤務系 */
+  { code:'出勤',     label:'出勤',           group:'work',  work:1   },
+  { code:'出(土日祝)', label:'出勤（土日祝）', group:'work',  work:1   },
+  { code:'出(早番)',  label:'出勤（早番）',   group:'work',  work:1   },
+  { code:'振出',     label:'振替出勤',       group:'work',  work:1   },
+  /* 休日系 */
+  { code:'公休',     label:'公休',           group:'off',   work:0   },
+  { code:'欠勤',     label:'欠勤',           group:'off',   work:0   },
+  { code:'振休',     label:'振替休日',       group:'off',   work:0   },
+  { code:'午前振休', label:'午前振休',       group:'off',   work:0.5 },
+  { code:'午後振休', label:'午後振休',       group:'off',   work:0.5 },
+  { code:'休職',     label:'休職',           group:'off',   work:0   },
+  /* 休暇系 */
+  { code:'有休',     label:'有休',           group:'leave', work:0   },
+  { code:'午前有休', label:'午前有休',       group:'leave', work:0.5 },
+  { code:'午後有休', label:'午後有休',       group:'leave', work:0.5 },
+  { code:'夏季',     label:'夏季休暇',       group:'leave', work:0   },
+  { code:'午前夏季', label:'午前夏季休暇',   group:'leave', work:0.5 },
+  { code:'午後夏季', label:'午後夏季休暇',   group:'leave', work:0.5 },
+  { code:'特休',     label:'特別休暇',       group:'leave', work:0   },
+  { code:'慶弔',     label:'慶弔休暇',       group:'leave', work:0   },
+  { code:'子看護',   label:'子の看護等休暇', group:'leave', work:0   },
+  { code:'介護',     label:'介護休暇',       group:'leave', work:0   },
 ];
-const SUM_ORDER = ['出','公','半休','半出','半夏','有','半有','休','特','慶弔','夏'];
+const SUM_ORDER = ['出勤','出(土日祝)','出(早番)','振出','公休','欠勤','振休','午前振休','午後振休','有休','午前有休','午後有休','夏季','午前夏季','午後夏季','特休','慶弔','子看護','介護','休職'];
 const MIN_STAFF_PER_DAY = 2;
 const DOW = ['日','月','火','水','木','金','土'];
 const catMap = Object.fromEntries(CATEGORIES.map(c => [c.code, c]));
@@ -560,7 +572,7 @@ function renderGrid(){
         const sel = document.createElement('select');
         sel.setAttribute('aria-label', (st.name || (i+1)+'人目') + ' ' + m + '月' + d + '日');
         sel.innerHTML = '<option value="">未入力</option>' +
-          CATEGORIES.map(c => '<option value="' + c.code + '">' + c.code + '　' + c.label + '</option>').join('');
+          CATEGORIES.map(c => '<option value="' + c.code + '">' + c.code + '</option>').join('');
         sel.value = st.days[d] || '';
         sel.addEventListener('change', e => {
           const before = st.days[d] || '';
