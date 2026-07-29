@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>勤務表作成ツール｜看護部</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0e376c;
+  --navy-soft:#e8edf5;
+  --ink:#1c2430;
+  --ink-mute:#5b6470;
+  --line:#c9d0d9;
+  --line-strong:#8b96a5;
+  --paper:#fff;
+  --shell:#f4f6f9;
+  --sat:#e2eefb;
+  --sun:#fbe6e8;
+  --work:#e9f4ec;
+  --off:#eef0f3;
+  --leave:#fdefe2;
+  --alert:#c8322f;
+  --warn:#8a5320;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:'Noto Sans JP',system-ui,sans-serif;background:var(--shell);
+  color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased;
+  -webkit-text-size-adjust:100%;
+}
+button,select,input,textarea{font-family:inherit}
+
+/* ---------- ヘッダー ---------- */
+.topbar{
+  background:var(--navy);color:#fff;padding:14px 20px;display:flex;
+  align-items:center;gap:16px;flex-wrap:wrap;position:sticky;top:0;z-index:60;
+}
+.topbar h1{
+  font-size:16px;font-weight:700;margin:0;letter-spacing:.06em;
+  padding-right:16px;border-right:1px solid rgba(255,255,255,.28);
+}
+.topbar .sub{font-size:11px;color:#b9c8de;letter-spacing:.1em;display:block;font-weight:400;margin-top:2px}
+.actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.35);
+  padding:8px 14px;border-radius:4px;font-size:12.5px;cursor:pointer;transition:background .15s;
+}
+.btn:hover{background:rgba(255,255,255,.22)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.btn-primary{background:#fff;color:var(--navy);border-color:#fff;font-weight:700}
+.btn-primary:hover{background:#dfe7f2}
+
+/* ---------- 帳票メタ ---------- */
+.meta{
+  background:var(--paper);margin:16px;padding:16px 20px;border:1px solid var(--line);
+  display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap;
+}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;color:var(--ink-mute);letter-spacing:.08em;font-weight:500}
+.field input,.field select{
+  border:0;border-bottom:2px solid var(--line-strong);background:transparent;
+  padding:5px 2px;font-size:16px;color:var(--ink);min-width:110px;border-radius:0;
+}
+.field input:focus,.field select:focus{outline:none;border-bottom-color:var(--navy)}
+.field.year input{width:82px}
+.field.month select{width:78px}
+.field.role select{width:110px}
+.field.dept select{width:130px}
+.status{margin-left:auto;display:flex;gap:22px;text-align:right}
+.stat .num{font-size:24px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.stat .lbl{font-size:10.5px;color:var(--ink-mute);letter-spacing:.06em;margin-top:4px}
+.stat.warn .num{color:var(--alert)}
+
+/* ---------- ロック表示 ---------- */
+.banner{margin:0 16px 12px;padding:11px 16px;font-size:12.5px;line-height:1.6;display:none;border-left:4px solid}
+.banner.show{display:block}
+.banner.admin{background:#fdf4e8;border-color:var(--warn);color:var(--warn)}
+.banner.closed{background:#f7eaea;border-color:var(--alert);color:var(--alert)}
+.banner b{font-weight:700}
+
+/* ---------- 見出し ---------- */
+.sec-head{margin:24px 16px 8px;display:flex;align-items:baseline;gap:12px;border-left:4px solid var(--navy);padding-left:10px;flex-wrap:wrap}
+.sec-head h2{font-size:14px;font-weight:700;margin:0;letter-spacing:.08em}
+.sec-head .desc{font-size:11.5px;color:var(--ink-mute)}
+
+/* ---------- テーブル共通 ---------- */
+.sheet{margin:0 16px;background:var(--paper);border:1px solid var(--line);overflow:auto;-webkit-overflow-scrolling:touch}
+#gridWrap{max-height:calc(100vh - 300px)}
+table{border-collapse:separate;border-spacing:0;font-size:12px;white-space:nowrap}
+th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0;text-align:center}
+thead th{background:var(--navy-soft);position:sticky;top:0;z-index:30;font-weight:500;color:var(--navy);height:26px}
+#grid thead tr:nth-child(2) th{top:26px}
+.c-no{width:34px;min-width:34px}
+.c-name{width:120px;min-width:120px}
+.c-day{width:38px;min-width:38px}
+.stick1{position:sticky;left:0;z-index:40;background:var(--paper)}
+.stick2{position:sticky;left:34px;z-index:40;background:var(--paper);border-right:2px solid var(--line-strong)}
+thead .stick1,thead .stick2{background:var(--navy-soft);z-index:50}
+.sat{background:var(--sat)}
+.sun{background:var(--sun)}
+thead .sat{background:#cfe2f6}
+thead .sun{background:#f6d6d9}
+.dow{font-size:10.5px;color:var(--ink-mute)}
+tbody tr{height:44px}
+.rowno{color:var(--ink-mute);font-size:11px;font-variant-numeric:tabular-nums}
+
+/* 氏名＋社員番号（2段） */
+.namecell{padding:2px 0}
+.namewrap{display:flex;align-items:center;gap:2px}
+.namecell input.nm{
+  flex:1;min-width:0;border:0;background:transparent;padding:3px 4px 2px 8px;
+  font-size:13px;font-weight:500;color:var(--ink);text-align:left;
+}
+.namecell input.emp{
+  width:100%;border:0;background:transparent;padding:0 8px 3px;
+  font-size:10.5px;color:var(--ink-mute);text-align:left;letter-spacing:.04em;
+  font-variant-numeric:tabular-nums;
+}
+.namecell input:focus{outline:2px solid var(--navy);outline-offset:-2px}
+.namecell input:disabled{-webkit-text-fill-color:currentColor;opacity:1}
+.delbtn{
+  flex:0 0 22px;width:22px;height:22px;border:0;background:transparent;color:var(--line-strong);
+  cursor:pointer;font-size:15px;line-height:1;border-radius:3px;opacity:0;margin-right:4px;
+  padding:0;transition:opacity .12s;
+}
+tbody tr:hover .delbtn{opacity:1}
+.delbtn:hover{background:#fbe6e8;color:var(--alert)}
+.delbtn:focus-visible{opacity:1;outline:2px solid var(--navy);outline-offset:1px}
+
+/* 勤務区分セル（表示は中央寄せ、操作はネイティブのプルダウン） */
+td.cell{padding:0;position:relative}
+td.cell select{
+  position:absolute;inset:0;width:100%;height:100%;opacity:0;z-index:2;
+  border:0;margin:0;padding:0;cursor:pointer;appearance:none;font-size:16px;
+}
+td.cell .val{
+  position:relative;z-index:1;display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;min-height:43px;font-size:13px;font-weight:500;
+  color:var(--ink);pointer-events:none;text-align:center;letter-spacing:.02em;
+}
+td.cell:focus-within{outline:2px solid var(--navy);outline-offset:-2px}
+td.cell.g-work{background:var(--work)}
+td.cell.g-off{background:var(--off)}
+td.cell.g-leave{background:var(--leave)}
+td.cell.g-none.sat{background:var(--sat)}
+td.cell.g-none.sun{background:var(--sun)}
+td.cell.locked select{display:none}
+td.cell.locked .val{color:var(--ink-mute)}
+
+/* 行事・出勤人数 */
+.eventrow td{height:32px;padding:0}
+.evbtn{
+  width:100%;height:31px;border:0;background:transparent;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;color:var(--line-strong);font-size:13px;
+  line-height:1;transition:background .12s;
+}
+.evbtn:hover{background:var(--navy-soft);color:var(--navy)}
+.evbtn:focus-visible{outline:2px solid var(--navy);outline-offset:-2px}
+.evbtn .dot{width:7px;height:7px;border-radius:50%;background:var(--navy);display:block}
+.evbtn .plus{opacity:0}
+.evbtn:hover .plus{opacity:.7}
+.countrow td{background:#f0f3f7;font-weight:700;font-variant-numeric:tabular-nums;font-size:12px;height:28px;text-align:center}
+.countrow td.low{background:#fbe6e8;color:var(--alert)}
+.rowlabel{font-size:11px;color:var(--ink-mute);text-align:left;padding-left:10px;font-weight:500}
+
+/* 勤務実績日数 */
+#sumWrap,#archWrap,#histWrap,#evWrap{margin-bottom:16px}
+#summary{width:100%}
+#summary th{height:30px;font-size:11.5px;padding:0 4px}
+#summary td{height:34px;font-variant-numeric:tabular-nums;color:var(--ink-mute);text-align:center}
+#summary td.hot{color:var(--ink);font-weight:700}
+#summary td.name{text-align:left;padding-left:10px;font-weight:500;color:var(--ink)}
+#summary th.g-work{background:#d8ebdd;color:#1d5c31}
+#summary th.g-off{background:#dfe3e8;color:#3d4753}
+#summary th.g-leave{background:#f7ddc4;color:#8a5320}
+#summary .c-emp,#archive .c-emp{width:96px;min-width:96px}
+#summary td.emp,#archive td.emp{font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink-mute)}
+#summary td.emp.missing{color:var(--alert);font-weight:700;background:#fdf0f1}
+#summary .c-sum{width:56px;min-width:56px}
+#summary .c-total{width:64px;min-width:64px;background:#fafbfc}
+#summary td.total{font-weight:700;color:var(--ink);background:#fafbfc}
+#summary td.blankwarn{color:var(--alert);font-weight:700;background:#fdf0f1}
+#summary tfoot td{background:var(--navy-soft);font-weight:700;color:var(--navy);height:32px;border-top:2px solid var(--line-strong)}
+#summary tfoot td.name{color:var(--navy)}
+
+/* 削除済み職員 */
+#archive{width:100%}
+#archive th{height:30px;font-size:11.5px;padding:0 4px;background:#e9ebee;color:#4a545f}
+#archive td{height:34px;font-variant-numeric:tabular-nums;color:var(--ink-mute);background:#fbfbfc;text-align:center}
+#archive td.hot{color:#454e59;font-weight:700}
+#archive td.name{text-align:left;padding-left:10px;color:#454e59;font-weight:500}
+.tag-del{display:inline-block;font-size:10px;background:#e3e6ea;color:#69737f;padding:1px 6px;border-radius:3px;margin-left:8px;font-weight:400}
+#archive td.when{font-size:11px}
+#archive td.ops{padding:0 8px}
+#archive .c-when{width:120px;min-width:120px}
+#archive .c-ops{width:190px;min-width:190px}
+.opbtn{border:1px solid var(--line-strong);background:#fff;color:var(--ink);font-size:11px;padding:5px 9px;border-radius:3px;cursor:pointer;margin-right:5px}
+.opbtn:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+.opbtn.danger{color:var(--alert);border-color:#e3b6b5}
+.opbtn.danger:hover{background:var(--alert);color:#fff;border-color:var(--alert)}
+.opbtn:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
+
+/* 変更履歴 */
+#history{width:100%}
+#history th{height:30px;font-size:11.5px;padding:0 8px;background:#efe7d9;color:var(--warn)}
+#history td{height:32px;padding:0 8px;font-size:12px;color:var(--ink-mute);text-align:left}
+#history td.who{font-weight:500;color:var(--ink)}
+#history td.chg{font-variant-numeric:tabular-nums;color:var(--ink);text-align:center}
+#history .arw{color:var(--line-strong);margin:0 6px}
+#history .c-at{width:150px;min-width:150px}
+#history .c-who{width:120px;min-width:120px}
+#history .c-tgt{width:150px;min-width:150px}
+#history .c-dt{width:110px;min-width:110px}
+
+/* 行事一覧 */
+.evlist{list-style:none;margin:0;padding:0}
+.evlist li{display:flex;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px}
+.evlist li:last-child{border-bottom:0}
+.evlist .d{flex:0 0 92px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums}
+.evlist .d .w{font-weight:400;color:var(--ink-mute);font-size:11.5px;margin-left:5px}
+.evlist .d.sat{color:#1f5c96}
+.evlist .d.sun{color:#a63a3d}
+.evlist .txt{white-space:pre-wrap;line-height:1.6;color:var(--ink)}
+
+/* モーダル */
+.backdrop{position:fixed;inset:0;background:rgba(16,24,38,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:16px}
+.backdrop.open{display:flex}
+.modal{background:var(--paper);width:min(470px,100%);border:1px solid var(--line);box-shadow:0 18px 48px rgba(16,24,38,.28)}
+.modal .head{background:var(--navy);color:#fff;padding:13px 16px;display:flex;align-items:center;gap:10px}
+.modal .head .date{font-size:15px;font-weight:700;letter-spacing:.04em}
+.modal .head .dowtag{font-size:11px;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:3px}
+.modal .head .nav{margin-left:auto;display:flex;gap:6px}
+.navbtn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.32);color:#fff;width:32px;height:32px;border-radius:3px;cursor:pointer;font-size:14px;line-height:1}
+.navbtn:hover:not(:disabled){background:rgba(255,255,255,.28)}
+.navbtn:disabled{opacity:.3;cursor:default}
+.modal .body{padding:16px}
+.modal .body label{display:block;font-size:11px;color:var(--ink-mute);letter-spacing:.08em;font-weight:500;margin-bottom:6px}
+.modal textarea{width:100%;height:120px;border:1px solid var(--line-strong);padding:10px;font-size:16px;line-height:1.6;resize:vertical;color:var(--ink);border-radius:0}
+.modal textarea:focus{outline:2px solid var(--navy);outline-offset:-1px;border-color:var(--navy)}
+.modal .hint{font-size:11px;color:var(--ink-mute);margin:8px 0 0}
+.modal .foot{padding:12px 16px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;background:#fafbfc;flex-wrap:wrap}
+.mbtn{padding:9px 16px;border-radius:4px;font-size:13px;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink)}
+.mbtn:hover{background:#eef1f5}
+.mbtn.primary{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700;margin-left:auto}
+.mbtn.primary:hover{background:#0a2a54}
+.mbtn.danger{color:var(--alert);border-color:#e3b6b5}
+.mbtn.danger:hover{background:#fdf0f1}
+.mbtn:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+
+/* 凡例・注記 */
+.legend{margin:10px 16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.legend .tag{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);padding:5px 10px;font-size:11.5px}
+.swatch{width:12px;height:12px;border:1px solid var(--line-strong)}
+.legend .note{font-size:11px;color:var(--ink-mute);margin-left:4px}
+.foot{margin:14px 16px 40px;font-size:11.5px;color:var(--ink-mute);line-height:1.7}
+
+/* ---------- スマートフォン ---------- */
+@media (max-width:760px){
+  .topbar{padding:10px 12px;gap:10px}
+  .topbar h1{font-size:14px;border-right:0;padding-right:0}
+  .actions{margin-left:0;width:100%;gap:6px}
+  .btn{flex:1 1 auto;padding:10px 8px;font-size:12px;min-width:0;white-space:nowrap}
+  .meta{margin:10px;padding:14px;gap:16px}
+  .status{width:100%;margin-left:0;justify-content:flex-start;text-align:left;gap:26px}
+  .banner{margin:0 10px 10px}
+  .sec-head{margin:18px 10px 6px}
+  .sheet{margin:0 10px}
+  #gridWrap{max-height:66vh}
+  .c-no{width:26px;min-width:26px}
+  .c-name{width:92px;min-width:92px}
+  .stick2{left:26px}
+  .c-day{width:42px;min-width:42px}
+  tbody tr{height:50px}
+  td.cell .val{min-height:49px;font-size:14px}
+  .delbtn{opacity:1}
+  .legend{margin:8px 10px 0}
+  .foot{margin:12px 10px 32px}
+  .modal .foot{gap:6px}
+  .mbtn{flex:1 1 auto;text-align:center}
+  .mbtn.primary{margin-left:0}
+  #summary .c-sum{width:46px;min-width:46px}
+  #archive .c-ops{width:170px;min-width:170px}
+}
+
+@media print{
+  body{background:#fff}
+  .topbar,.legend,.foot,.backdrop,.banner{display:none!important}
+  .meta,.sheet{margin:0 0 6mm;border:0}
+  #gridWrap{max-height:none;overflow:visible}
+  .sec-head{margin:4mm 0 2mm}
+  .delbtn,#archive td.ops{display:none}
+  @page{size:A3 landscape;margin:8mm}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>勤務表作成ツール<span class="sub" id="subTitle">シフト予定</span></h1>
+  <div class="actions">
+    <button class="btn" id="addStaff">職員を追加</button>
+    <button class="btn" id="loadJson">読み込む</button>
+    <button class="btn" id="saveJson">保存する</button>
+    <button class="btn" id="printBtn">印刷</button>
+    <button class="btn btn-primary" id="exportCsv">照合用CSVを書き出す</button>
+  </div>
+</div>
+
+<div class="meta">
+  <div class="field year"><label>年</label><input type="number" id="year" min="2020" max="2100"></div>
+  <div class="field month"><label>月</label><select id="month"></select></div>
+  <div class="field dept"><label>部署</label><select id="dept"></select></div>
+  <div class="field role"><label>権限（暫定）</label>
+    <select id="role"><option value="admin">管理者</option><option value="staff">職員</option></select>
+  </div>
+  <div class="status">
+    <div class="stat" id="statFilled"><div class="num">0</div><div class="lbl">入力済み</div></div>
+    <div class="stat warn" id="statBlank"><div class="num">0</div><div class="lbl">未入力</div></div>
+  </div>
+</div>
+
+<div class="banner" id="banner"></div>
+
+<div class="sec-head"><h2>勤務予定表</h2><span class="desc">マスを選んで勤務区分を指定します</span></div>
+<div class="sheet" id="gridWrap"><table id="grid"></table></div>
+
+<div class="legend" id="legend"></div>
+
+<div class="sec-head"><h2>勤務実績日数</h2><span class="desc">上の表から自動集計されます</span></div>
+<div class="sheet" id="sumWrap"><table id="summary"></table></div>
+
+<div class="sec-head" id="archHead" hidden><h2>削除済みの職員</h2><span class="desc">記録は残ります。勤務予定表には表示されません</span></div>
+<div class="sheet" id="archWrap" hidden><table id="archive"></table></div>
+
+<div class="sec-head" id="histHead" hidden><h2>変更履歴</h2><span class="desc">締切後に管理者が修正した内容です</span></div>
+<div class="sheet" id="histWrap" hidden><table id="history"></table></div>
+
+<div class="sec-head" id="evHead" hidden><h2>行事・特記事項</h2><span class="desc">記入した内容を日付順に表示します</span></div>
+<div class="sheet" id="evWrap" hidden><ul class="evlist" id="evList"></ul></div>
+
+<div class="backdrop" id="backdrop" role="dialog" aria-modal="true" aria-labelledby="mDate">
+  <div class="modal">
+    <div class="head">
+      <span class="date" id="mDate">—</span>
+      <span class="dowtag" id="mDow">—</span>
+      <span class="nav">
+        <button class="navbtn" id="mPrev" aria-label="前の日">‹</button>
+        <button class="navbtn" id="mNext" aria-label="次の日">›</button>
+      </span>
+    </div>
+    <div class="body">
+      <label for="mText">行事・特記事項</label>
+      <textarea id="mText" placeholder="例：岡本さん午後早退 / 平松 朝OC早出"></textarea>
+      <p class="hint">Esc で閉じる ／ Ctrl（⌘）+ Enter で保存</p>
+    </div>
+    <div class="foot">
+      <button class="mbtn danger" id="mDelete">削除する</button>
+      <button class="mbtn" id="mCancel">閉じる</button>
+      <button class="mbtn primary" id="mSave">保存する</button>
+    </div>
+  </div>
+</div>
+
+<p class="foot">
+  <span id="verLabel"></span><br>
+  未入力のマスは白のまま残ります。書き出す前に「未入力」が 0 になっているか確認してください。<br>
+  締切は月末です。翌月に入ると職員は閲覧のみとなり、管理者の修正は変更履歴に記録されます。さらに前の月は編集できません。
+</p>
+
+<script>
+/* ============================================================
+   勤務区分の定義
+   code / label / group（色分け）/ work（出勤人数の係数）
+   区分を増減する場合はこの配列と SUM_ORDER を編集してください。
+   ============================================================ */
+const CATEGORIES = [
+  { code:'出',   label:'出勤',        group:'work',  work:1   },
+  { code:'半出', label:'半日出勤',     group:'work',  work:0.5 },
+  { code:'公',   label:'公休',        group:'off',   work:0   },
+  { code:'半休', label:'半日公休',     group:'off',   work:0.5 },
+  { code:'休',   label:'休み',        group:'off',   work:0   },
+  { code:'有',   label:'有給休暇',     group:'leave', work:0   },
+  { code:'半有', label:'半日有給',     group:'leave', work:0.5 },
+  { code:'夏',   label:'夏季休暇',     group:'leave', work:0   },
+  { code:'半夏', label:'半日夏季休暇', group:'leave', work:0.5 },
+  { code:'特',   label:'特別休暇',     group:'leave', work:0   },
+  { code:'慶弔', label:'慶弔休暇',     group:'leave', work:0   },
+];
+const SUM_ORDER = ['出','公','半休','半出','半夏','有','半有','休','特','慶弔','夏'];
+const MIN_STAFF_PER_DAY = 2;
+const DOW = ['日','月','火','水','木','金','土'];
+const catMap = Object.fromEntries(CATEGORIES.map(c => [c.code, c]));
+
+/* 確認用バージョン。更新のたびに書き換えてください。 */
+const VERSION = 'v0.9';
+const RELEASED = '2026-07-29';
+
+/* 部署の一覧。増減する場合はこの配列を編集してください。 */
+const DEPARTMENTS = ['管理部','事務','診療アシスタント','看護師','ドライバー','戸塚院','港南院'];
+
+let role = 'admin';   /* 暫定。GAS移行後はGoogleアカウントから自動判定します */
+
+const blankStaff = () => Array.from({length:6}, () => ({ emp:'', name:'', days:{} }));
+
+let state = {
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
+  dept: DEPARTMENTS[0],
+  /* 表示中の部署の作業データ */
+  staff: blankStaff(),
+  events: {},
+  archived: [],
+  history: [],
+  /* 部署ごとの保管場所 */
+  depts: {},
+};
+
+/* 表示中のデータを部署の保管場所へ退避します */
+function stashDept(name){
+  state.depts[name] = {
+    staff: state.staff,
+    events: state.events,
+    archived: state.archived,
+    history: state.history,
+  };
+}
+
+/* 部署の保管場所から作業データを取り出します */
+function loadDept(name){
+  const d = state.depts[name] || {};
+  state.staff = Array.isArray(d.staff) && d.staff.length ? d.staff : blankStaff();
+  state.events = d.events || {};
+  state.archived = Array.isArray(d.archived) ? d.archived : [];
+  state.history = Array.isArray(d.history) ? d.history : [];
+}
+
+const $ = id => document.getElementById(id);
+const daysInMonth = (y,m) => new Date(y, m, 0).getDate();
+const dowOf = (y,m,d) => new Date(y, m-1, d).getDay();
+const stamp = () => {
+  const d = new Date();
+  return d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' ' +
+         String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+};
+
+/* ============================================================
+   締切とロック
+   当月・未来      … 職員も管理者も編集できます
+   前月            … 職員は閲覧のみ／管理者は編集可（履歴に記録）
+   前々月より前    … 全員編集できません
+   ============================================================ */
+function lockLevel(){
+  const now = new Date();
+  const diff = (now.getFullYear()*12 + now.getMonth()) - (state.year*12 + (state.month-1));
+  if(diff <= 0) return 'open';
+  if(diff === 1) return 'admin';
+  return 'closed';
+}
+function canEdit(){
+  const lv = lockLevel();
+  if(lv === 'open') return true;
+  if(lv === 'admin') return role === 'admin';
+  return false;
+}
+function isTracked(){ return lockLevel() === 'admin' && role === 'admin'; }
+
+function paintBanner(){
+  const b = $('banner'), lv = lockLevel();
+  b.className = 'banner';
+  if(lv === 'open'){ b.textContent = ''; return; }
+  if(lv === 'admin'){
+    b.classList.add('show','admin');
+    b.innerHTML = role === 'admin'
+      ? '<b>締切済みの月です。</b>管理者として修正できますが、変更内容は下の「変更履歴」に記録されます。'
+      : '<b>締切済みの月です。</b>閲覧のみとなります。修正が必要な場合は管理者にご連絡ください。';
+  }else{
+    b.classList.add('show','closed');
+    b.innerHTML = '<b>確定済みの月です。</b>記録として保存されているため、誰も編集できません。';
+  }
+}
+
+/* ============================================================
+   勤務予定表
+   ============================================================ */
+function renderGrid(){
+  const y = state.year, m = state.month, dm = daysInMonth(y,m);
+  const editable = canEdit();
+  const t = $('grid');
+  t.innerHTML = '';
+
+  const thead = document.createElement('thead');
+  const r1 = document.createElement('tr');
+  r1.innerHTML = '<th class="c-no stick1" rowspan="2">No</th><th class="c-name stick2" rowspan="2">氏名</th>';
+  for(let d=1; d<=dm; d++){
+    const w = dowOf(y,m,d);
+    r1.innerHTML += '<th class="c-day ' + (w===6?'sat':w===0?'sun':'') + '">' + d + '</th>';
+  }
+  thead.appendChild(r1);
+  const r2 = document.createElement('tr');
+  for(let d=1; d<=dm; d++){
+    const w = dowOf(y,m,d);
+    r2.innerHTML += '<th class="c-day dow ' + (w===6?'sat':w===0?'sun':'') + '">' + DOW[w] + '</th>';
+  }
+  thead.appendChild(r2);
+  t.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  state.staff.forEach((st, i) => {
+    const tr = document.createElement('tr');
+
+    const tdNo = document.createElement('td');
+    tdNo.className = 'c-no stick1 rowno';
+    tdNo.textContent = i + 1;
+    tr.appendChild(tdNo);
+
+    const tdName = document.createElement('td');
+    tdName.className = 'c-name stick2 namecell';
+    const wrap = document.createElement('div');
+    wrap.className = 'namewrap';
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'nm';
+    inp.value = st.name || ''; inp.placeholder = '氏名';
+    inp.disabled = !editable;
+    inp.setAttribute('aria-label', (i+1) + '人目の氏名');
+    inp.addEventListener('input', e => { st.name = e.target.value; refresh(); });
+    wrap.appendChild(inp);
+    if(editable){
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'delbtn'; del.textContent = '×';
+      del.title = 'この職員を削除';
+      del.setAttribute('aria-label', (st.name || (i+1)+'人目') + 'を削除');
+      del.addEventListener('click', () => removeStaff(i));
+      wrap.appendChild(del);
+    }
+    tdName.appendChild(wrap);
+
+    const emp = document.createElement('input');
+    emp.type = 'text'; emp.className = 'emp';
+    emp.value = st.emp || ''; emp.placeholder = '社員番号';
+    emp.disabled = !editable;
+    emp.setAttribute('aria-label', (i+1) + '人目の社員番号');
+    emp.addEventListener('input', e => { st.emp = e.target.value; refresh(); });
+    tdName.appendChild(emp);
+
+    tr.appendChild(tdName);
+
+    for(let d=1; d<=dm; d++){
+      const w = dowOf(y,m,d);
+      const td = document.createElement('td');
+      td.className = 'cell c-day ' + (w===6?'sat ':w===0?'sun ':'');
+
+      if(editable){
+        const sel = document.createElement('select');
+        sel.setAttribute('aria-label', (st.name || (i+1)+'人目') + ' ' + m + '月' + d + '日');
+        sel.innerHTML = '<option value="">未入力</option>' +
+          CATEGORIES.map(c => '<option value="' + c.code + '">' + c.code + '　' + c.label + '</option>').join('');
+        sel.value = st.days[d] || '';
+        sel.addEventListener('change', e => {
+          const before = st.days[d] || '';
+          const after = e.target.value;
+          st.days[d] = after;
+          if(isTracked() && before !== after) logChange(st, d, before, after);
+          paint(td, after);
+          refresh();
+        });
+        td.appendChild(sel);
+      }else{
+        td.classList.add('locked');
+      }
+
+      const val = document.createElement('span');
+      val.className = 'val';
+      val.textContent = st.days[d] || '';
+      td.appendChild(val);
+
+      paint(td, st.days[d] || '');
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  });
+
+  /* 行事・特記 */
+  const ev = document.createElement('tr');
+  ev.className = 'eventrow';
+  ev.innerHTML = '<td class="c-no stick1"></td><td class="c-name stick2 rowlabel">行事・特記</td>';
+  for(let d=1; d<=dm; d++){
+    const w = dowOf(y,m,d);
+    const td = document.createElement('td');
+    td.className = 'c-day ' + (w===6?'sat':w===0?'sun':'');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'evbtn'; btn.dataset.ev = d;
+    btn.addEventListener('click', () => openEvent(d));
+    td.appendChild(btn);
+    ev.appendChild(td);
+  }
+  tbody.appendChild(ev);
+
+  /* 出勤人数 */
+  const cnt = document.createElement('tr');
+  cnt.className = 'countrow';
+  cnt.innerHTML = '<td class="c-no stick1"></td><td class="c-name stick2 rowlabel">出勤人数</td>';
+  for(let d=1; d<=dm; d++){
+    const td = document.createElement('td');
+    td.className = 'c-day'; td.dataset.count = d;
+    cnt.appendChild(td);
+  }
+  tbody.appendChild(cnt);
+
+  t.appendChild(tbody);
+}
+
+function paint(td, code){
+  td.classList.remove('g-work','g-off','g-leave','g-none');
+  const c = catMap[code];
+  td.classList.add(c ? 'g-' + c.group : 'g-none');
+  const v = td.querySelector('.val');
+  if(v) v.textContent = code || '';
+}
+
+/* ============================================================
+   変更履歴
+   ============================================================ */
+function logChange(st, day, before, after){
+  state.history.push({
+    at: stamp(),
+    by: '管理者',
+    target: (st.name || '').trim() || '（氏名未入力）',
+    date: state.year + '-' + String(state.month).padStart(2,'0') + '-' + String(day).padStart(2,'0'),
+    from: before || '（未入力）',
+    to: after || '（未入力）',
+  });
+  renderHistory();
+}
+
+function renderHistory(){
+  const list = (state.history || []).slice().reverse();
+  const has = list.length > 0;
+  $('histHead').hidden = !has;
+  $('histWrap').hidden = !has;
+  const t = $('history');
+  t.innerHTML = '';
+  if(!has) return;
+
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th class="c-at">変更日時</th><th class="c-who">変更者</th>' +
+    '<th class="c-tgt">対象者</th><th class="c-dt">対象日</th><th>変更内容</th></tr>';
+  t.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  list.forEach(h => {
+    const tr = document.createElement('tr');
+    const cells = [
+      ['', h.at], ['who', h.by], ['who', h.target], ['', h.date],
+    ];
+    cells.forEach(([cls, txt]) => {
+      const td = document.createElement('td');
+      if(cls) td.className = cls;
+      td.textContent = txt;
+      tr.appendChild(td);
+    });
+    const td = document.createElement('td');
+    td.className = 'chg';
+    td.innerHTML = '<span></span><span class="arw">→</span><span></span>';
+    td.children[0].textContent = h.from;
+    td.children[2].textContent = h.to;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+  t.appendChild(tbody);
+}
+
+/* ============================================================
+   勤務実績日数
+   ============================================================ */
+function renderSummary(){
+  const t = $('summary');
+  t.innerHTML = '';
+
+  const thead = document.createElement('thead');
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<th class="c-no">No</th><th class="c-emp">社員番号</th><th class="c-name">氏名</th>';
+  SUM_ORDER.forEach(code => {
+    const c = catMap[code];
+    tr.innerHTML += '<th class="c-sum g-' + (c ? c.group : 'off') + '" title="' +
+                    (c ? c.label : code) + '">' + code + '</th>';
+  });
+  tr.innerHTML += '<th class="c-total">合計</th><th class="c-total">未入力</th>';
+  thead.appendChild(tr);
+  t.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  state.staff.forEach((st, i) => {
+    const row = document.createElement('tr');
+    row.innerHTML = '<td class="rowno">' + (i+1) + '</td>' +
+                    '<td class="emp" data-semp="' + i + '"></td>' +
+                    '<td class="name" data-sname="' + i + '"></td>';
+    SUM_ORDER.forEach(code => row.innerHTML += '<td data-sum="' + i + ':' + code + '">0</td>');
+    row.innerHTML += '<td class="total" data-total="' + i + '">0</td><td data-blank="' + i + '">0</td>';
+    tbody.appendChild(row);
+  });
+  t.appendChild(tbody);
+
+  const tfoot = document.createElement('tfoot');
+  const ft = document.createElement('tr');
+  ft.innerHTML = '<td></td><td></td><td class="name">部署合計</td>';
+  SUM_ORDER.forEach(code => ft.innerHTML += '<td data-gsum="' + code + '">0</td>');
+  ft.innerHTML += '<td data-gtotal>0</td><td data-gblank>0</td>';
+  tfoot.appendChild(ft);
+  t.appendChild(tfoot);
+}
+
+function refresh(){
+  const dm = daysInMonth(state.year, state.month);
+  let filled = 0, blank = 0;
+  const grand = {}; SUM_ORDER.forEach(c => grand[c] = 0);
+
+  state.staff.forEach((st, i) => {
+    const tally = {};
+    let pF = 0, pB = 0;
+    for(let d=1; d<=dm; d++){
+      const v = st.days[d];
+      if(v){ tally[v] = (tally[v]||0)+1; pF++; } else { pB++; }
+    }
+    filled += pF; blank += pB;
+
+    const nc = document.querySelector('[data-sname="' + i + '"]');
+    if(nc) nc.textContent = (st.name || '').trim() || '（未入力）';
+    const ec = document.querySelector('[data-semp="' + i + '"]');
+    if(ec){
+      const v = (st.emp || '').trim();
+      ec.textContent = v || '—';
+      ec.classList.toggle('missing', !v && !!(st.name || '').trim());
+    }
+
+    SUM_ORDER.forEach(code => {
+      const cell = document.querySelector('[data-sum="' + i + ':' + code + '"]');
+      if(!cell) return;
+      const n = tally[code] || 0;
+      grand[code] += n;
+      cell.textContent = n;
+      cell.classList.toggle('hot', n > 0);
+    });
+    const tc = document.querySelector('[data-total="' + i + '"]');
+    if(tc) tc.textContent = pF;
+    const bc = document.querySelector('[data-blank="' + i + '"]');
+    if(bc){ bc.textContent = pB; bc.classList.toggle('blankwarn', pB > 0); }
+  });
+
+  SUM_ORDER.forEach(code => {
+    const c = document.querySelector('[data-gsum="' + code + '"]');
+    if(c) c.textContent = grand[code];
+  });
+  const gt = document.querySelector('[data-gtotal]'); if(gt) gt.textContent = filled;
+  const gb = document.querySelector('[data-gblank]'); if(gb) gb.textContent = blank;
+
+  for(let d=1; d<=dm; d++){
+    let n = 0;
+    state.staff.forEach(st => { const c = catMap[st.days[d]]; if(c) n += c.work; });
+    const cell = document.querySelector('[data-count="' + d + '"]');
+    if(cell){
+      cell.textContent = n % 1 ? n.toFixed(1) : n;
+      cell.classList.toggle('low', n < MIN_STAFF_PER_DAY);
+    }
+  }
+  $('statFilled').querySelector('.num').textContent = filled;
+  $('statBlank').querySelector('.num').textContent = blank;
+}
+
+/* ============================================================
+   職員の削除・復元
+   ============================================================ */
+const filledDays = st => Object.values(st.days || {}).filter(v => v).length;
+
+function removeStaff(i){
+  if(!canEdit()) return;
+  const st = state.staff[i];
+  const name = (st.name || '').trim() || (i+1) + '人目';
+  const n = filledDays(st);
+  const msg = n > 0
+    ? name + 'さんを勤務予定表から削除します。\n\n入力済みの ' + n + ' 日分は「削除済みの職員」に残り、CSVにも書き出されます。'
+    : name + 'さんを削除します。入力された勤務はありません。';
+  if(!confirm(msg)) return;
+  if(n > 0) state.archived.push({ emp: (st.emp||'').trim(), name: (st.name||'').trim() || name, days: st.days, removedAt: stamp() });
+  state.staff.splice(i, 1);
+  if(state.staff.length === 0) state.staff.push({ emp:'', name:'', days:{} });
+  render();
+}
+
+function restoreStaff(i){
+  if(!canEdit()) return;
+  const a = state.archived[i];
+  state.staff.push({ emp: a.emp || '', name: a.name, days: a.days });
+  state.archived.splice(i, 1);
+  render();
+}
+
+function purgeStaff(i){
+  if(!canEdit()) return;
+  const a = state.archived[i];
+  if(!confirm(a.name + 'さんの記録を完全に削除します。\n\nこの操作は取り消せません。')) return;
+  state.archived.splice(i, 1);
+  render();
+}
+
+function renderArchived(){
+  const list = state.archived || [];
+  const has = list.length > 0;
+  $('archHead').hidden = !has;
+  $('archWrap').hidden = !has;
+  const t = $('archive');
+  t.innerHTML = '';
+  if(!has) return;
+
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  hr.innerHTML = '<th class="c-emp">社員番号</th><th class="c-name">氏名</th>';
+  SUM_ORDER.forEach(code => {
+    const c = catMap[code];
+    hr.innerHTML += '<th class="c-sum" title="' + (c ? c.label : code) + '">' + code + '</th>';
+  });
+  hr.innerHTML += '<th class="c-total">合計</th><th class="c-when">削除日時</th><th class="c-ops">操作</th>';
+  thead.appendChild(hr);
+  t.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const editable = canEdit();
+  list.forEach((a, i) => {
+    const tally = {}; let total = 0;
+    Object.values(a.days || {}).forEach(v => { if(v){ tally[v] = (tally[v]||0)+1; total++; } });
+
+    const tr = document.createElement('tr');
+    const empTd = document.createElement('td');
+    empTd.className = 'emp';
+    empTd.textContent = (a.emp || '').trim() || '—';
+    tr.appendChild(empTd);
+    const nameTd = document.createElement('td');
+    nameTd.className = 'name';
+    nameTd.textContent = a.name;
+    const tag = document.createElement('span');
+    tag.className = 'tag-del'; tag.textContent = '削除済み';
+    nameTd.appendChild(tag);
+    tr.appendChild(nameTd);
+
+    SUM_ORDER.forEach(code => {
+      const td = document.createElement('td');
+      const n = tally[code] || 0;
+      td.textContent = n;
+      if(n > 0) td.className = 'hot';
+      tr.appendChild(td);
+    });
+
+    const tt = document.createElement('td'); tt.className = 'hot'; tt.textContent = total; tr.appendChild(tt);
+    const wt = document.createElement('td'); wt.className = 'when'; wt.textContent = a.removedAt || '—'; tr.appendChild(wt);
+
+    const ops = document.createElement('td');
+    ops.className = 'ops';
+    if(editable){
+      const rb = document.createElement('button');
+      rb.type='button'; rb.className='opbtn'; rb.textContent='予定表に戻す';
+      rb.addEventListener('click', () => restoreStaff(i));
+      const pb = document.createElement('button');
+      pb.type='button'; pb.className='opbtn danger'; pb.textContent='記録ごと削除';
+      pb.addEventListener('click', () => purgeStaff(i));
+      ops.appendChild(rb); ops.appendChild(pb);
+    }else{
+      ops.textContent = '—';
+    }
+    tr.appendChild(ops);
+    tbody.appendChild(tr);
+  });
+  t.appendChild(tbody);
+}
+
+/* ============================================================
+   行事・特記
+   ============================================================ */
+const evText = d => (state.events[d] || '').trim();
+
+function paintEvents(){
+  const dm = daysInMonth(state.year, state.month);
+  for(let d=1; d<=dm; d++){
+    const btn = document.querySelector('[data-ev="' + d + '"]');
+    if(!btn) continue;
+    const txt = evText(d);
+    btn.innerHTML = txt ? '<span class="dot"></span>' : '<span class="plus">＋</span>';
+    btn.title = txt || (state.month + '月' + d + '日の行事');
+    btn.setAttribute('aria-label', state.month + '月' + d + '日の行事・特記' + (txt ? '（記入あり）' : '（未記入）'));
+  }
+}
+
+function renderEventList(){
+  const dm = daysInMonth(state.year, state.month);
+  const items = [];
+  for(let d=1; d<=dm; d++){
+    const txt = evText(d);
+    if(txt) items.push({ d, txt, w: dowOf(state.year, state.month, d) });
+  }
+  const has = items.length > 0;
+  $('evHead').hidden = !has;
+  $('evWrap').hidden = !has;
+  if(!has){ $('evList').innerHTML = ''; return; }
+
+  $('evList').innerHTML = items.map(it =>
+    '<li><span class="d ' + (it.w===6?'sat':it.w===0?'sun':'') + '">' +
+    state.month + '/' + it.d + '<span class="w">' + DOW[it.w] + '</span></span><span class="txt"></span></li>').join('');
+  document.querySelectorAll('#evList .txt').forEach((el, i) => el.textContent = items[i].txt);
+}
+
+let evDay = null, evOpener = null;
+
+function openEvent(d){
+  evDay = d;
+  evOpener = document.querySelector('[data-ev="' + d + '"]');
+  const w = dowOf(state.year, state.month, d);
+  const editable = canEdit();
+  $('mDate').textContent = state.year + '年' + state.month + '月' + d + '日';
+  $('mDow').textContent = DOW[w] + '曜日';
+  $('mText').value = state.events[d] || '';
+  $('mText').readOnly = !editable;
+  $('mSave').style.display = editable ? '' : 'none';
+  $('mDelete').style.display = editable ? '' : 'none';
+  $('mPrev').disabled = d <= 1;
+  $('mNext').disabled = d >= daysInMonth(state.year, state.month);
+  $('backdrop').classList.add('open');
+  $('mText').focus();
+}
+
+function commitEvent(){
+  if(evDay === null || !canEdit()) return;
+  const v = $('mText').value.trim();
+  if(v) state.events[evDay] = v; else delete state.events[evDay];
+  paintEvents();
+  renderEventList();
+}
+
+function closeEvent(){
+  $('backdrop').classList.remove('open');
+  if(evOpener) evOpener.focus();
+  evDay = null; evOpener = null;
+}
+
+function moveEvent(step){
+  commitEvent();
+  const next = evDay + step;
+  if(next < 1 || next > daysInMonth(state.year, state.month)) return;
+  openEvent(next);
+}
+
+$('mSave').addEventListener('click', () => { commitEvent(); closeEvent(); });
+$('mCancel').addEventListener('click', closeEvent);
+$('mDelete').addEventListener('click', () => { $('mText').value = ''; commitEvent(); closeEvent(); });
+$('mPrev').addEventListener('click', () => moveEvent(-1));
+$('mNext').addEventListener('click', () => moveEvent(1));
+$('backdrop').addEventListener('mousedown', e => { if(e.target === $('backdrop')){ commitEvent(); closeEvent(); } });
+document.addEventListener('keydown', e => {
+  if(!$('backdrop').classList.contains('open')) return;
+  if(e.key === 'Escape'){ e.preventDefault(); commitEvent(); closeEvent(); }
+  if(e.key === 'Enter' && (e.metaKey || e.ctrlKey)){ e.preventDefault(); commitEvent(); closeEvent(); }
+});
+
+/* ============================================================
+   凡例・幅そろえ
+   ============================================================ */
+function legend(){
+  const groups = { work:'勤務', off:'休日', leave:'休暇' };
+  $('legend').innerHTML =
+    Object.entries(groups).map(([g,l]) =>
+      '<span class="tag"><span class="swatch" style="background:var(--' + g + ')"></span>' + l + '</span>').join('') +
+    '<span class="tag"><span class="swatch" style="background:var(--sat)"></span>土曜</span>' +
+    '<span class="tag"><span class="swatch" style="background:var(--sun)"></span>日曜</span>' +
+    '<span class="note">出勤人数が ' + MIN_STAFF_PER_DAY + ' 名未満の日は赤で表示されます</span>';
+}
+
+function syncWidths(){
+  const w = $('grid').offsetWidth;
+  if(!w) return;
+  ['gridWrap','sumWrap','archWrap','histWrap','evWrap'].forEach(id => {
+    const el = $(id);
+    if(el) el.style.maxWidth = w + 'px';
+  });
+  const lg = document.querySelector('.legend');
+  if(lg) lg.style.maxWidth = w + 'px';
+}
+let resizeTimer = null;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(syncWidths, 120); });
+
+function render(){
+  $('subTitle').textContent = state.dept + ' / シフト予定';
+  paintBanner();
+  renderGrid();
+  renderSummary();
+  renderArchived();
+  renderHistory();
+  paintEvents();
+  renderEventList();
+  refresh();
+  requestAnimationFrame(syncWidths);
+}
+
+/* ============================================================
+   保存・書き出し
+   ============================================================ */
+function download(name, text, mime){
+  const blob = new Blob([text], {type: mime});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+$('saveJson').addEventListener('click', () => {
+  stashDept(state.dept);
+  download('勤務表_' + state.year + '.' + state.month + '.json',
+           JSON.stringify(state, null, 2), 'application/json');
+});
+
+$('loadJson').addEventListener('click', () => {
+  const f = document.createElement('input');
+  f.type = 'file'; f.accept = '.json,application/json';
+  f.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try{
+        const d = JSON.parse(r.result);
+        if(!d.depts && !d.staff) throw new Error('形式が違います');
+
+        /* 部署ごとの構造がない旧ファイルは、その部署ぶんとして取り込みます */
+        if(!d.depts){
+          d.depts = {};
+          d.depts[d.dept || DEPARTMENTS[0]] = {
+            staff: d.staff || [], events: d.events || {},
+            archived: d.archived || [], history: d.history || [],
+          };
+        }
+        state = d;
+        if(!DEPARTMENTS.includes(state.dept)) state.dept = DEPARTMENTS[0];
+        Object.values(state.depts).forEach(dp => {
+          (dp.staff || []).forEach(s => {
+            if(typeof s.name !== 'string') s.name = '';
+            if(typeof s.emp !== 'string') s.emp = '';
+          });
+          (dp.archived || []).forEach(s => {
+            if(typeof s.name !== 'string') s.name = '';
+            if(typeof s.emp !== 'string') s.emp = '';
+          });
+        });
+        loadDept(state.dept);
+        $('year').value = state.year;
+        $('month').value = state.month;
+        $('dept').value = state.dept;
+        render();
+      }catch(err){
+        alert('このファイルは読み込めません。保存した勤務表のJSONファイルを選んでください。');
+      }
+    };
+    r.readAsText(file);
+  });
+  f.click();
+});
+
+/* 1行＝1人1日。全部署をまとめて書き出します（部署列で判別できます） */
+$('exportCsv').addEventListener('click', () => {
+  stashDept(state.dept);
+  const dm = daysInMonth(state.year, state.month);
+  const rows = [['社員番号','氏名','日付','曜日','勤務区分','区分名称','部署','状態']];
+
+  const push = (st, dept, status) => {
+    const name = (st.name || '').trim();
+    if(!name) return;
+    for(let d=1; d<=dm; d++){
+      const code = (st.days || {})[d];
+      if(!code) continue;
+      const date = state.year + '-' + String(state.month).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      rows.push([(st.emp || '').trim(), name, date, DOW[dowOf(state.year,state.month,d)], code,
+                 (catMap[code] ? catMap[code].label : ''), dept, status]);
+    }
+  };
+
+  DEPARTMENTS.forEach(dept => {
+    const dp = state.depts[dept];
+    if(!dp) return;
+    (dp.staff || []).forEach(st => push(st, dept, '在籍'));
+    (dp.archived || []).forEach(a => push(a, dept, '削除済み'));
+  });
+
+  if(rows.length === 1){ alert('書き出せるデータがありません。氏名と勤務区分を入力してください。'); return; }
+  const csv = '\uFEFF' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\r\n');
+  download('勤務予定_' + state.year + String(state.month).padStart(2,'0') + '.csv',
+           csv, 'text/csv;charset=utf-8');
+});
+
+$('printBtn').addEventListener('click', () => window.print());
+
+$('addStaff').addEventListener('click', () => {
+  if(!canEdit()){ alert('この月は編集できません。'); return; }
+  state.staff.push({ emp:'', name:'', days:{} });
+  render();
+});
+
+/* ---------- 初期化 ---------- */
+$('month').innerHTML = Array.from({length:12}, (_,i) => '<option value="' + (i+1) + '">' + (i+1) + '</option>').join('');
+$('dept').innerHTML = DEPARTMENTS.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+$('year').value = state.year;
+$('month').value = state.month;
+$('dept').value = state.dept;
+
+['year','month'].forEach(id => $(id).addEventListener('change', e => {
+  state[id] = Number(e.target.value);
+  render();
+}));
+
+/* 部署を切り替えると、その部署の勤務表に入れ替わります */
+$('dept').addEventListener('change', e => {
+  stashDept(state.dept);
+  state.dept = e.target.value;
+  loadDept(state.dept);
+  render();
+});
+
+$('role').addEventListener('change', e => { role = e.target.value; render(); });
+
+$('verLabel').textContent = '確認用バージョン ' + VERSION + '（' + RELEASED + '）';
+legend();
+render();
+</script>
+</body>
+</html>
