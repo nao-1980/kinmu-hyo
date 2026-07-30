@@ -699,13 +699,11 @@ const CATEGORIES = [
   { code:'後夏', label:'午後夏季休暇',    group:'leave', work:0.5 },
   { code:'特',   label:'特休',           group:'leave', work:0   },
   { code:'慶弔', label:'慶弔休暇',        group:'leave', work:0   },
-  { code:'休職', label:'休職',           group:'other', work:0   },
-  { code:'在籍', label:'在籍なし',        group:'other', work:0   },
 ];
 
 /* 勤務実績日数の並び順（ハーモスのプルダウン順に合わせています） */
 const SUM_ORDER = ['出','祝出','早','振出','公','欠','振','前振','後振',
-                   '有','前有','後有','夏','前夏','後夏','特','慶弔','休職','在籍'];
+                   '有','前有','後有','夏','前夏','後夏','特','慶弔'];
 
 const MIN_STAFF_PER_DAY = 2;
 const DOW = ['日','月','火','水','木','金','土'];
@@ -723,7 +721,7 @@ const catMap = Object.fromEntries(CATEGORIES.map(c => [c.code, c]));
 const DEMO_MODE = true;
 
 /* 確認用バージョン。更新のたびに書き換えてください。 */
-const VERSION = 'v2.1';
+const VERSION = 'v3.1';
 const RELEASED = '2026-07-30';
 
 /* 部署の一覧。増減する場合はこの配列を編集してください。 */
@@ -779,6 +777,85 @@ const stamp = () => {
   return d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' ' +
          String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 };
+
+
+/* ============================================================
+   日本の祝日（1980〜2099年）
+   振替休日・国民の休日も自動で判定します。
+   祝日は日曜と同じ色で表示します。
+   ============================================================ */
+const holidayCache = {};
+
+function holidaysOf(y){
+  if(holidayCache[y]) return holidayCache[y];
+  const H = {};
+  const key = (m,d) => m + '-' + d;
+  const put = (m,d,name) => { if(d >= 1) H[key(m,d)] = name; };
+  const nthMon = (m,n) => 1 + ((8 - new Date(y, m-1, 1).getDay()) % 7) + (n-1)*7;
+
+  put(1,1,'元日');
+  put(1, nthMon(1,2), '成人の日');
+  put(2,11,'建国記念の日');
+  put(2,23,'天皇誕生日');
+  put(3, Math.floor(20.8431 + 0.242194*(y-1980) - Math.floor((y-1980)/4)), '春分の日');
+  put(4,29,'昭和の日');
+  put(5,3,'憲法記念日');
+  put(5,4,'みどりの日');
+  put(5,5,'こどもの日');
+  put(7, nthMon(7,3), '海の日');
+  put(8,11,'山の日');
+  put(9, nthMon(9,3), '敬老の日');
+  put(9, Math.floor(23.2488 + 0.242194*(y-1980) - Math.floor((y-1980)/4)), '秋分の日');
+  put(10, nthMon(10,2), 'スポーツの日');
+  put(11,3,'文化の日');
+  put(11,23,'勤労感謝の日');
+
+  const has = dt => !!H[key(dt.getMonth()+1, dt.getDate())];
+
+  /* 振替休日：祝日が日曜なら、次の祝日でない日 */
+  const furikae = [];
+  for(let m=1; m<=12; m++){
+    const dim = new Date(y, m, 0).getDate();
+    for(let d=1; d<=dim; d++){
+      if(!H[key(m,d)]) continue;
+      if(new Date(y, m-1, d).getDay() !== 0) continue;
+      const t = new Date(y, m-1, d+1);
+      while(has(t)) t.setDate(t.getDate()+1);
+      furikae.push(t);
+    }
+  }
+  furikae.forEach(t => put(t.getMonth()+1, t.getDate(), '振替休日'));
+
+  /* 国民の休日：祝日に挟まれた平日 */
+  const kokumin = [];
+  for(let m=1; m<=12; m++){
+    const dim = new Date(y, m, 0).getDate();
+    for(let d=1; d<=dim; d++){
+      if(H[key(m,d)]) continue;
+      const cur = new Date(y, m-1, d);
+      if(cur.getDay() === 0) continue;
+      const pv = new Date(y, m-1, d-1), nx = new Date(y, m-1, d+1);
+      if(has(pv) && has(nx)) kokumin.push([m,d]);
+    }
+  }
+  kokumin.forEach(([m,d]) => put(m, d, '国民の休日'));
+
+  holidayCache[y] = H;
+  return H;
+}
+
+const holidayName = (y,m,d) => holidaysOf(y)[m + '-' + d] || '';
+
+/* 表示用：祝日は日曜と同じ扱いにします */
+function dayClass(y,m,d){
+  if(holidayName(y,m,d)) return 'sun';
+  const w = new Date(y, m-1, d).getDay();
+  return w === 6 ? 'sat' : w === 0 ? 'sun' : '';
+}
+function dayTitle(y,m,d){
+  const h = holidayName(y,m,d);
+  return h ? ' title="' + h + '"' : '';
+}
 
 /* ============================================================
    締切とロック
@@ -942,13 +1019,13 @@ function renderGrid(){
                  (cmp ? '<th class="c-rl stick3" rowspan="2"></th>' : '');
   for(let d=1; d<=dm; d++){
     const w = dowOf(y,m,d);
-    r1.innerHTML += '<th class="c-day ' + (w===6?'sat':w===0?'sun':'') + '">' + d + '</th>';
+    r1.innerHTML += '<th class="c-day ' + dayClass(y,m,d) + '"' + dayTitle(y,m,d) + '>' + d + '</th>';
   }
   thead.appendChild(r1);
   const r2 = document.createElement('tr');
   for(let d=1; d<=dm; d++){
     const w = dowOf(y,m,d);
-    r2.innerHTML += '<th class="c-day dow ' + (w===6?'sat':w===0?'sun':'') + '">' + DOW[w] + '</th>';
+    r2.innerHTML += '<th class="c-day dow ' + dayClass(y,m,d) + '"' + dayTitle(y,m,d) + '>' + DOW[w] + '</th>';
   }
   thead.appendChild(r2);
   t.appendChild(thead);
@@ -1007,7 +1084,7 @@ function renderGrid(){
     for(let d=1; d<=dm; d++){
       const w = dowOf(y,m,d);
       const td = document.createElement('td');
-      td.className = 'cell c-day ' + (w===6?'sat ':w===0?'sun ':'');
+      td.className = 'cell c-day ' + dayClass(y,m,d) + ' ';
 
       if(editable){
         const sel = document.createElement('select');
@@ -1054,7 +1131,7 @@ function renderGrid(){
       for(let d=1; d<=dm; d++){
         const w = dowOf(y,m,d);
         const td = document.createElement('td');
-        td.className = 'cell c-day ' + (w===6?'sat ':w===0?'sun ':'');
+        td.className = 'cell c-day ' + dayClass(y,m,d) + ' ';
         td.classList.add('locked');
         const code = act ? (act[d] || '') : '';
         const val = document.createElement('span');
@@ -1080,7 +1157,7 @@ function renderGrid(){
   for(let d=1; d<=dm; d++){
     const w = dowOf(y,m,d);
     const td = document.createElement('td');
-    td.className = 'c-day ' + (w===6?'sat':w===0?'sun':'');
+    td.className = 'c-day ' + dayClass(y,m,d);
     const btn = document.createElement('button');
     btn.type = 'button'; btn.className = 'evbtn'; btn.dataset.ev = d;
     btn.addEventListener('click', () => openEvent(d));
@@ -1402,7 +1479,7 @@ function renderEventList(){
   if(!has){ $('evList').innerHTML = ''; return; }
 
   $('evList').innerHTML = items.map(it =>
-    '<li><span class="d ' + (it.w===6?'sat':it.w===0?'sun':'') + '">' +
+    '<li><span class="d ' + dayClass(state.year, state.month, it.d) + '">' +
     state.month + '/' + it.d + '<span class="w">' + DOW[it.w] + '</span></span><span class="txt"></span></li>').join('');
   document.querySelectorAll('#evList .txt').forEach((el, i) => el.textContent = items[i].txt);
 }
@@ -2197,7 +2274,7 @@ function legend(){
     Object.entries(groups).map(([g,l]) =>
       '<span class="tag"><span class="swatch" style="background:var(--' + g + ')"></span>' + l + '</span>').join('') +
     '<span class="tag"><span class="swatch" style="background:var(--sat)"></span>土曜</span>' +
-    '<span class="tag"><span class="swatch" style="background:var(--sun)"></span>日曜</span>' +
+    '<span class="tag"><span class="swatch" style="background:var(--sun)"></span>日曜・祝日</span>' +
     '<span class="note">出勤人数が ' + MIN_STAFF_PER_DAY + ' 名未満の日は赤で表示されます</span>';
 }
 
