@@ -108,6 +108,10 @@ button,select,input,textarea{font-family:inherit}
 .field.year input{width:82px}
 .field.month select{width:78px}
 .field.role select{width:110px}
+.roleval{
+  font-size:15px;color:var(--ink);padding:5px 2px;
+  border-bottom:2px solid var(--line);min-width:110px;white-space:nowrap;
+}
 .field.role select:disabled{color:var(--ink);-webkit-text-fill-color:var(--ink);opacity:1;border-bottom-style:dotted}
 .field.role label{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .field.dept select{width:130px}
@@ -470,6 +474,48 @@ tr.actrow td.cell{cursor:default}
 .preview td{padding:4px 6px;text-align:left;color:var(--ink-mute);white-space:nowrap}
 .imperr{margin-top:10px;padding:9px 12px;background:#fdf0f1;color:var(--alert);font-size:12px;line-height:1.6}
 
+
+/* ---------- ログイン ---------- */
+.login{
+  position:fixed;inset:0;z-index:200;background:var(--navy);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+.login[hidden]{display:none}
+.lbox{background:var(--paper);width:min(400px,100%);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.lhead{background:var(--navy);color:#fff;padding:22px 24px;border-bottom:3px solid #ffd66b}
+.ltitle{font-size:18px;font-weight:700;letter-spacing:.06em}
+.lsub{font-size:12px;color:#b9c8de;margin-top:6px}
+.lbody{padding:22px 24px 24px}
+.lf{display:block;margin-bottom:16px}
+.lf span{display:block;font-size:11px;color:var(--ink-mute);letter-spacing:.08em;font-weight:500;margin-bottom:6px}
+.lf select,.lf input{
+  width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line-strong);
+  background:#fff;color:var(--ink);border-radius:3px;
+}
+.lf select:focus,.lf input:focus{outline:2px solid var(--navy);outline-offset:-1px;border-color:var(--navy)}
+.lbtn{
+  width:100%;padding:13px;background:var(--navy);color:#fff;border:0;border-radius:3px;
+  font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.06em;
+}
+.lbtn:hover{background:#0a2a54}
+.lbtn:disabled{opacity:.5;cursor:default}
+.lbtn:focus-visible{outline:2px solid #ffd66b;outline-offset:2px}
+.lerr{
+  background:#fdf0f1;color:var(--alert);font-size:12.5px;line-height:1.6;
+  padding:10px 12px;margin-bottom:14px;white-space:pre-wrap;
+}
+.lnote{font-size:11.5px;color:var(--ink-mute);margin:14px 0 0;line-height:1.7}
+.whoami{
+  display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:#b9c8de;
+  padding:6px 12px;border-radius:14px;background:rgba(255,255,255,.08);white-space:nowrap;
+}
+.whoami b{color:#fff;font-weight:500}
+@media (max-width:760px){
+  .lbox{width:100%}
+  .lhead{padding:18px 18px}
+  .lbody{padding:18px}
+}
+
 /* 凡例・注記 */
 .legend{margin:10px 16px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .legend .tag{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);padding:5px 10px;font-size:11.5px}
@@ -537,10 +583,46 @@ tr.actrow td.cell{cursor:default}
 </head>
 <body>
 
+<div class="login" id="login">
+  <div class="lbox">
+    <div class="lhead">
+      <div class="ltitle">勤務表作成ツール</div>
+      <div class="lsub">部署と合言葉を入力してください</div>
+    </div>
+    <div class="lbody">
+      <label class="lf"><span>部署</span><select id="loginDept"></select></label>
+      <label class="lf"><span>合言葉</span>
+        <input type="password" id="loginPass" autocomplete="off" placeholder="配布された合言葉">
+      </label>
+      <div class="lerr" id="loginErr" hidden></div>
+      <button class="lbtn" id="loginBtn">ログイン</button>
+      <p class="lnote">合言葉が分からない場合は、部署の管理者にご確認ください。</p>
+    </div>
+  </div>
+</div>
+
+<div class="login" id="namePick" hidden>
+  <div class="lbox">
+    <div class="lhead">
+      <div class="ltitle">お名前の確認</div>
+      <div class="lsub" id="namePickSub">—</div>
+    </div>
+    <div class="lbody">
+      <label class="lf"><span>氏名</span><select id="myName"></select></label>
+      <label class="lf" id="myNameFreeWrap" hidden><span>氏名（入力）</span>
+        <input type="text" id="myNameFree" placeholder="お名前を入力">
+      </label>
+      <button class="lbtn" id="nameBtn">この名前で続ける</button>
+      <p class="lnote">変更履歴に記録するために使用します。</p>
+    </div>
+  </div>
+</div>
+
 <div class="demobar" id="demoBar" hidden>デモ版｜画面の動作を確認するためのものです。<b>入力内容は保存されません。</b></div>
 <div class="topbar">
   <h1>勤務表作成ツール<span class="sub" id="subTitle">シフト予定</span></h1>
   <div class="actions">
+    <span class="whoami" id="whoami"></span>
     <span class="autosave" id="autosave" hidden><span class="dot"></span><span class="t">読み込みました</span></span>
     <button class="btn" id="addStaff">職員を追加</button>
     <button class="btn" id="loadTop" hidden>読み込む</button>
@@ -556,7 +638,8 @@ tr.actrow td.cell{cursor:default}
   <div class="field month"><label>月</label><select id="month"></select></div>
   <div class="field dept"><label>部署</label><select id="dept"></select></div>
   <div class="field role"><label id="roleLabel">権限</label>
-    <select id="role"><option value="admin">管理者</option><option value="staff">職員</option></select>
+    <div class="roleval" id="roleVal">—</div>
+    <select id="role" hidden><option value="admin">管理者</option><option value="staff">職員</option></select>
   </div>
   <div class="field src">
     <label>保存先</label>
@@ -726,7 +809,7 @@ const DEMO_MODE = false;
 const GAS_MODE  = true;   /* スプレッドシートに保存します */
 
 /* 確認用バージョン。更新のたびに書き換えてください。 */
-const VERSION = 'v3.1';
+const VERSION = 'v4.2';
 const RELEASED = '2026-07-30';
 
 /* 部署の一覧。増減する場合はこの配列を編集してください。 */
@@ -1058,6 +1141,10 @@ function renderGrid(){
     inp.disabled = !editable;
     inp.setAttribute('aria-label', (i+1) + '人目の氏名');
     inp.addEventListener('input', e => { st.name = e.target.value; markDirty(); refresh(); });
+    inp.addEventListener('change', () => {
+      if(!canEdit()) return;
+      if(applyDefaultShift(st)){ markDirty(); render(); }
+    });
     wrap.appendChild(inp);
     if(editable){
       const del = document.createElement('button');
@@ -1095,7 +1182,7 @@ function renderGrid(){
         const sel = document.createElement('select');
         sel.setAttribute('aria-label', (st.name || (i+1)+'人目') + ' ' + m + '月' + d + '日');
         sel.innerHTML = '<option value="">未入力</option>' +
-          CATEGORIES.map(c => '<option value="' + c.code + '">' + c.code + '　' + c.label + '</option>').join('');
+          CATEGORIES.map(c => '<option value="' + c.code + '">' + c.label + '</option>').join('');
         sel.value = st.days[d] || '';
         sel.addEventListener('change', e => {
           const before = st.days[d] || '';
@@ -1343,6 +1430,34 @@ function refresh(){
   }
   $('statFilled').querySelector('.num').textContent = filled;
   $('statBlank').querySelector('.num').textContent = blank;
+}
+
+
+/* ============================================================
+   氏名を入れたときの初期設定
+   ------------------------------------------------------------
+   まだ1日も入力されていない行に氏名が入ると、
+   平日を「出勤」、土日祝を「公休」で埋めます。
+   すでに入力がある行には触れません。
+   自動で埋めたくない場合は AUTO_FILL_ON_NAME を false にしてください。
+   ============================================================ */
+const AUTO_FILL_ON_NAME = true;
+const FILL_WEEKDAY = '出';   /* 平日に入れる記号 */
+const FILL_HOLIDAY = '公';   /* 土日祝に入れる記号 */
+
+function applyDefaultShift(st){
+  if(!AUTO_FILL_ON_NAME) return false;
+  if(!String(st.name || '').trim()) return false;
+
+  const dm = daysInMonth(state.year, state.month);
+  /* すでに1日でも入力されていれば何もしません */
+  for(let d = 1; d <= dm; d++){ if(st.days[d]) return false; }
+
+  for(let d = 1; d <= dm; d++){
+    const cls = dayClass(state.year, state.month, d);
+    st.days[d] = (cls === 'sat' || cls === 'sun') ? FILL_HOLIDAY : FILL_WEEKDAY;
+  }
+  return true;
 }
 
 /* ============================================================
@@ -2214,9 +2329,9 @@ $('impRun').addEventListener('click', () => {
     }
 
     const st = state.staff[i];
-    /* 勤務予定（st.days）には一切触れません */
+    /* すでに入力済みの勤務予定には一切触れません */
     if(!String(st.emp||'').trim() && pp.emp){ st.emp = pp.emp; filledEmp++; }
-    if(!String(st.name||'').trim() && disp){ st.name = disp; filledName++; }
+    if(!String(st.name||'').trim() && disp){ st.name = disp; filledName++; applyDefaultShift(st); }
     if(!roster) actuals[staffKey(st)] = pp.days;
     matched++;
   });
@@ -2367,10 +2482,15 @@ function doSave(){
       saving = false;
       setStatus('error', '保存できませんでした');
       console.error(err);
+      if(err && /有効期限/.test(err.message || '')){
+        alert('ログインの有効期限が切れました。画面を再読み込みしてください。');
+        location.reload();
+        return;
+      }
       alert('保存できませんでした。\n\n' + (err && err.message ? err.message : '') +
             '\n\n通信の状態をご確認のうえ、もう一度編集すると再送されます。');
     })
-    .saveMonth(ymKey(), state.dept, payload);
+    .saveMonth(TOKEN, ymKey(), state.dept, payload);
 }
 
 const ymKey = () => state.year + '.' + state.month;
@@ -2403,7 +2523,7 @@ function loadFromSheet(){
       setStatus('error', '読み込めませんでした');
       alert('読み込めませんでした。\n\n' + (err && err.message ? err.message : ''));
     })
-    .loadMonth(ymKey(), state.dept);
+    .loadMonth(TOKEN, ymKey(), state.dept);
 }
 
 /* 月・部署を切り替えるときは、現在の内容を保存してから読み込みます */
@@ -2422,7 +2542,7 @@ function switchTo(fn){
   google.script.run
     .withSuccessHandler(() => { saving = false; after(); })
     .withFailureHandler(() => { saving = false; after(); })
-    .saveMonth(ymKey(), state.dept, payload);
+    .saveMonth(TOKEN, ymKey(), state.dept, payload);
 }
 
 function applyMode(){
@@ -2569,27 +2689,129 @@ applyMode();
 legend();
 render();
 
-/* 権限・部署一覧をサーバーから受け取ってから読み込みます */
+/* ============================================================
+   ログイン
+   ------------------------------------------------------------
+   合言葉でサーバーから受け取ったトークンを、以降の
+   すべての通信に添えます。トークンがないとサーバー側で
+   読み書きが拒否されます。
+   ============================================================ */
+let TOKEN = null;
+let ME = { role:'', dept:'', name:'' };
+
+function showLogin(depts){
+  $('loginDept').innerHTML = (depts || [])
+    .map(d => '<option value="' + d + '">' + d + '</option>').join('');
+  $('login').hidden = false;
+  $('loginPass').focus();
+}
+
+function loginFail(msg){
+  $('loginErr').hidden = false;
+  $('loginErr').textContent = msg;
+  $('loginBtn').disabled = false;
+  $('loginBtn').textContent = 'ログイン';
+}
+
+function applyAuth(a){
+  TOKEN = a.token;
+  ME = { role: a.role, dept: a.dept || '', name: a.name || '' };
+  role = a.role;
+  $('role').value = role;
+
+  const depts = a.departments || [];
+  $('dept').innerHTML = depts.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+  if(depts.indexOf(state.dept) < 0) state.dept = depts[0] || state.dept;
+  $('dept').value = state.dept;
+  $('dept').disabled = (role !== 'admin');
+
+  $('login').hidden = true;
+  paintWhoami();
+  loadFromSheet();
+}
+
+function paintWhoami(){
+  const el = $('whoami');
+  if(!el) return;
+  const label = ME.role === 'admin'
+    ? '管理者' + (ME.name ? '（' + ME.name + '）' : '')
+    : ME.dept + (ME.name ? '／' + ME.name : '');
+  el.innerHTML = '<b>' + label + '</b>';
+  $('roleLabel').textContent = '権限';
+  $('roleVal').textContent = ME.role === 'admin' ? '管理者' : '職員';
+}
+
+$('loginBtn').addEventListener('click', doLogin);
+$('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+
+function doLogin(){
+  $('loginErr').hidden = true;
+  $('loginBtn').disabled = true;
+  $('loginBtn').textContent = '確認中…';
+  google.script.run
+    .withSuccessHandler(a => {
+      if(a.role === 'staff'){
+        pendingAuth = a;
+        showNamePick(a);
+      }else{
+        applyAuth(a);
+      }
+    })
+    .withFailureHandler(err => loginFail(err && err.message ? err.message : 'ログインできませんでした。'))
+    .login($('loginDept').value, $('loginPass').value);
+}
+
+/* --- 氏名の選択（変更履歴に残すため） --- */
+let pendingAuth = null;
+
+function showNamePick(a){
+  $('login').hidden = true;
+  $('namePick').hidden = false;
+  $('namePickSub').textContent = a.dept;
+  const names = a.names || [];
+  if(names.length){
+    $('myName').innerHTML = names.map(n => '<option value="' + n + '">' + n + '</option>').join('')
+      + '<option value="__other__">（一覧にない）</option>';
+    $('myNameFreeWrap').hidden = true;
+  }else{
+    $('myName').innerHTML = '<option value="__other__">（名簿が未登録です）</option>';
+    $('myNameFreeWrap').hidden = false;
+  }
+  $('myName').addEventListener('change', () => {
+    $('myNameFreeWrap').hidden = ($('myName').value !== '__other__');
+  });
+}
+
+$('nameBtn').addEventListener('click', () => {
+  const sel = $('myName').value;
+  const nm = (sel === '__other__') ? $('myNameFree').value.trim() : sel;
+  if(!nm){ $('myNameFree').focus(); return; }
+  $('nameBtn').disabled = true;
+  google.script.run
+    .withSuccessHandler(() => {
+      pendingAuth.name = nm;
+      $('namePick').hidden = true;
+      applyAuth(pendingAuth);
+    })
+    .withFailureHandler(err => {
+      $('nameBtn').disabled = false;
+      alert(err && err.message ? err.message : '登録できませんでした。');
+    })
+    .setMyName(pendingAuth.token, nm);
+});
+
+/* --- 起動 --- */
 google.script.run
-  .withSuccessHandler(b => {
-    role = b.role;
-    $('role').value = role;
-    $('role').disabled = true;
-    $('roleLabel').textContent = '権限（' + (b.email || '—') + '）';
-    if(Array.isArray(b.departments) && b.departments.length){
-      $('dept').innerHTML = b.departments
-        .map(d => '<option value="' + d + '">' + d + '</option>').join('');
-      if(b.departments.indexOf(state.dept) < 0) state.dept = b.departments[0];
-      $('dept').value = state.dept;
-    }
-    loadFromSheet();
+  .withSuccessHandler(a => {
+    if(a.authed){ applyAuth(a); }
+    else { loading = false; showLogin(a.departments); }
   })
   .withFailureHandler(err => {
     loading = false;
     setStatus('error', '接続できませんでした');
     alert('サーバーに接続できませんでした。\n\n' + (err && err.message ? err.message : ''));
   })
-  .getBootstrap();
+  .getAuthInfo();
 </script>
 </body>
 </html>
