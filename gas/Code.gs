@@ -2,13 +2,15 @@
  * ============================================================
  * 勤務表作成ツール ── サーバー側（Google Apps Script）
  * ------------------------------------------------------------
- * スプレッドシートに保存し、Googleアカウントで権限を判定します。
+ * 部署ごとの合言葉でログインします。
+ * Googleアカウントを持っていない職員でも利用できます。
  *
  * 使うシート
- *   設定        … 管理者・部署・必要出勤人数
- *   _data       … 保存の本体（年月×部署ごとのJSON）
- *   勤務予定     … 人が読む用（1行＝1人1日。保存のたびに作り直します）
- *   アクセスログ … 開いた人の記録
+ *   設定        … 部署・必要出勤人数・管理者メール
+ *   合言葉      … 管理者と部署ごとの合言葉（非表示）
+ *   _data       … 保存の本体（年月×部署ごとのJSON。非表示）
+ *   勤務予定     … 人が読む用（1行＝1人1日）
+ *   アクセスログ … ログインの記録
  *
  * ※ 初回は setup() を1回だけ実行してください。
  * ============================================================
@@ -16,19 +18,25 @@
 
 const DATA_SHEET = '_data';
 const CONF_SHEET = '設定';
+const PASS_SHEET = '合言葉';
 const PLAN_SHEET = '勤務予定';
 const LOG_SHEET  = 'アクセスログ';
 
-/* 既定値。setup() で「設定」シートに書き出されます */
 const DEFAULT_DEPARTMENTS =
   ['管理部','事務','診療アシスタント','看護師','ドライバー','戸塚院','港南院'];
+
+/* ログインの有効時間（秒）。既定は6時間 */
+const TOKEN_TTL = 6 * 60 * 60;
+
+/* 合言葉を間違えられる回数と、超えた場合の待ち時間（秒） */
+const MAX_FAIL = 5;
+const LOCK_SEC = 10 * 60;
 
 
 /* ============================================================
    画面の表示
    ============================================================ */
 function doGet() {
-  logAccess_();
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
     .setTitle('勤務表作成ツール')
@@ -38,30 +46,52 @@ function doGet() {
 
 /* ============================================================
    初回セットアップ
-   スクリプトエディタで一度だけ実行してください
    ============================================================ */
 function setup() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error('スプレッドシートに紐づいていません。\n' +
+      'スプレッドシートを開き、拡張機能 → Apps Script から作り直してください。');
+  }
 
-  /* --- 設定シート --- */
+  /* --- 設定 --- */
   let conf = ss.getSheetByName(CONF_SHEET);
   if (!conf) {
     conf = ss.insertSheet(CONF_SHEET);
     conf.getRange(1, 1, 4, 2).setValues([
       ['項目', '値'],
-      ['管理者', Session.getActiveUser().getEmail()],
+      ['管理者メール', Session.getActiveUser().getEmail() || ''],
       ['部署', DEFAULT_DEPARTMENTS.join(', ')],
       ['必要出勤人数', 2],
     ]);
     conf.getRange(1, 1, 1, 2).setFontWeight('bold').setBackground('#e8edf5');
-    conf.setColumnWidth(1, 140);
+    conf.setColumnWidth(1, 150);
     conf.setColumnWidth(2, 520);
-    conf.getRange('A5').setValue(
-      '※ 管理者はカンマ区切りで複数指定できます。ここに載っていない人は「職員」になります。');
-    conf.getRange('A5').setFontColor('#5b6470').setFontSize(10);
+    conf.getRange('A6').setValue(
+      '※「管理者メール」に登録した方は、Googleアカウントでログイン済みなら合言葉なしで管理者として入れます。');
+    conf.getRange('A6').setFontColor('#5b6470').setFontSize(10);
   }
 
-  /* --- データシート --- */
+  /* --- 合言葉 --- */
+  let pass = ss.getSheetByName(PASS_SHEET);
+  if (!pass) {
+    pass = ss.insertSheet(PASS_SHEET);
+    const rows = [['対象', '合言葉', '更新日時']];
+    rows.push(['管理者', makePasscode_(), new Date()]);
+    getDepartments_().forEach(function (d) { rows.push([d, makePasscode_(), new Date()]); });
+    pass.getRange(1, 1, rows.length, 3).setValues(rows);
+    pass.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#e8edf5');
+    pass.setColumnWidth(1, 160);
+    pass.setColumnWidth(2, 180);
+    pass.setColumnWidth(3, 180);
+    pass.getRange(2, 2, rows.length - 1, 1).setFontFamily('Courier New').setFontSize(13);
+    pass.getRange(rows.length + 2, 1).setValue(
+      '※ 合言葉は自由に書き換えられます。変更すると、次回のログインから新しい合言葉が必要になります。');
+    pass.getRange(rows.length + 2, 1).setFontColor('#5b6470').setFontSize(10);
+    pass.hideSheet();
+  }
+
+  /* --- データ --- */
   let data = ss.getSheetByName(DATA_SHEET);
   if (!data) {
     data = ss.insertSheet(DATA_SHEET);
@@ -73,7 +103,7 @@ function setup() {
     data.hideSheet();
   }
 
-  /* --- 勤務予定シート --- */
+  /* --- 勤務予定 --- */
   let plan = ss.getSheetByName(PLAN_SHEET);
   if (!plan) {
     plan = ss.insertSheet(PLAN_SHEET);
@@ -87,61 +117,162 @@ function setup() {
   let log = ss.getSheetByName(LOG_SHEET);
   if (!log) {
     log = ss.insertSheet(LOG_SHEET);
-    log.getRange(1, 1, 1, 3)
-       .setValues([['日時', 'メールアドレス', '権限']])
+    log.getRange(1, 1, 1, 5)
+       .setValues([['日時', '結果', '部署', '氏名', '備考']])
        .setFontWeight('bold').setBackground('#e8edf5');
     log.setFrozenRows(1);
   }
 
-  SpreadsheetApp.getUi().alert(
-    'セットアップが完了しました。\n\n' +
-    '「設定」シートで管理者と部署をご確認ください。\n' +
-    'その後、デプロイ → 新しいデプロイ → ウェブアプリ で公開します。');
+  const msg = 'セットアップが完了しました。\n' +
+    '「合言葉」シート（非表示）に、管理者と部署ごとの合言葉が発行されています。\n' +
+    '表示 → 非表示のシート から開いて確認してください。';
+  Logger.log(msg);
+  return msg;
 }
 
-
-/* ============================================================
-   画面が最初に呼ぶ処理
-   ============================================================ */
-function getBootstrap() {
-  const email = getEmail_();
-  return {
-    email: email,
-    role: isAdmin_(email) ? 'admin' : 'staff',
-    departments: getDepartments_(),
-    minStaff: getConf_('必要出勤人数', 2),
-  };
+/** 合言葉を発行します（紛らわしい文字を除いた8桁） */
+function makePasscode_() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 8; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+  return s;
 }
 
-
-/* ============================================================
-   読み込み
-   ============================================================ */
-function loadMonth(ym, dept) {
-  const key = makeKey_(ym, dept);
-  const sh = sheet_(DATA_SHEET);
+/** 合言葉を作り直したいときに、この関数を実行します */
+function resetPasscodes() {
+  const sh = sheet_(PASS_SHEET);
   const rows = sh.getDataRange().getValues();
   for (let i = 1; i < rows.length; i++) {
-    if (String(rows[i][0]) === key) {
-      try {
-        return JSON.parse(rows[i][3]);
-      } catch (e) {
-        throw new Error('保存データを読み取れませんでした（' + key + '）');
-      }
-    }
+    if (!String(rows[i][0]).trim()) continue;
+    sh.getRange(i + 1, 2).setValue(makePasscode_());
+    sh.getRange(i + 1, 3).setValue(new Date());
   }
-  return null;   /* 未作成の月・部署 */
+  Logger.log('合言葉を作り直しました。「合言葉」シートを確認してください。');
 }
 
 
 /* ============================================================
-   保存
-   payload = { staff, events, archived, history, actuals, actualsMeta }
+   ログイン
    ============================================================ */
-function saveMonth(ym, dept, payload) {
-  const email = getEmail_();
-  const lock = LockService.getScriptLock();
 
+/** 画面を開いたときに呼ばれます */
+function getAuthInfo() {
+  const email = getEmail_();
+
+  /* 管理者メールに登録済みで、Googleアカウントでログイン済みなら合言葉は不要 */
+  if (email && isAdminMail_(email)) {
+    const token = issueToken_({ role: 'admin', dept: '', name: email });
+    logAccess_('自動ログイン', '', email, '管理者メール');
+    return {
+      authed: true, token: token, role: 'admin', dept: '', name: email,
+      departments: getDepartments_(), minStaff: getConf_('必要出勤人数', 2)
+    };
+  }
+  return { authed: false, departments: getDepartments_() };
+}
+
+/** 合言葉でログインします */
+function login(dept, passcode) {
+  const cache = CacheService.getScriptCache();
+  const fkey = 'fail_' + String(dept);
+  const fails = Number(cache.get(fkey) || 0);
+
+  if (fails >= MAX_FAIL) {
+    logAccess_('ロック中', dept, '', '連続失敗');
+    throw new Error('入力の失敗が続いたため、しばらくログインできません。\n10分ほど待ってからお試しください。');
+  }
+
+  const code = String(passcode || '').trim();
+  if (!code) throw new Error('合言葉を入力してください。');
+
+  const table = getPasscodes_();
+
+  /* 管理者の合言葉なら、部署を問わず管理者として入ります */
+  if (table['管理者'] && code === table['管理者']) {
+    cache.remove(fkey);
+    const token = issueToken_({ role: 'admin', dept: '', name: '管理者' });
+    logAccess_('ログイン', '', '管理者', '合言葉');
+    return {
+      authed: true, token: token, role: 'admin', dept: '', name: '管理者',
+      departments: getDepartments_(), minStaff: getConf_('必要出勤人数', 2)
+    };
+  }
+
+  /* 部署の合言葉 */
+  const want = table[String(dept)];
+  if (want && code === want) {
+    cache.remove(fkey);
+    const token = issueToken_({ role: 'staff', dept: String(dept), name: '' });
+    logAccess_('ログイン', dept, '', '合言葉');
+    return {
+      authed: true, token: token, role: 'staff', dept: String(dept), name: '',
+      departments: [String(dept)], minStaff: getConf_('必要出勤人数', 2),
+      names: rosterNames_(String(dept))
+    };
+  }
+
+  cache.put(fkey, String(fails + 1), LOCK_SEC);
+  logAccess_('失敗', dept, '', '合言葉が違います');
+  throw new Error('合言葉が違います。（あと ' + Math.max(0, MAX_FAIL - fails - 1) + ' 回）');
+}
+
+/** ログイン後に氏名を選びます（変更履歴に残すため） */
+function setMyName(token, name) {
+  const me = verify_(token);
+  me.name = String(name || '').trim();
+  CacheService.getScriptCache().put('tok_' + token, JSON.stringify(me), TOKEN_TTL);
+  logAccess_('氏名選択', me.dept, me.name, '');
+  return { ok: true };
+}
+
+function issueToken_(me) {
+  const token = Utilities.getUuid();
+  me.at = new Date().toISOString();
+  CacheService.getScriptCache().put('tok_' + token, JSON.stringify(me), TOKEN_TTL);
+  return token;
+}
+
+/** すべてのデータ操作の入口で必ず確認します */
+function verify_(token) {
+  const raw = CacheService.getScriptCache().get('tok_' + String(token || ''));
+  if (!raw) {
+    throw new Error('ログインの有効期限が切れました。画面を再読み込みして、もう一度ログインしてください。');
+  }
+  return JSON.parse(raw);
+}
+
+/** その部署を扱ってよいかを確認します */
+function allow_(me, dept) {
+  if (me.role === 'admin') return;
+  if (String(me.dept) !== String(dept)) {
+    throw new Error('この部署を開く権限がありません。');
+  }
+}
+
+
+/* ============================================================
+   読み込み・保存
+   ============================================================ */
+function loadMonth(token, ym, dept) {
+  const me = verify_(token);
+  allow_(me, dept);
+
+  const key = makeKey_(ym, dept);
+  const rows = sheet_(DATA_SHEET).getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === key) {
+      try { return JSON.parse(rows[i][3]); }
+      catch (e) { throw new Error('保存データを読み取れませんでした（' + key + '）'); }
+    }
+  }
+  return null;
+}
+
+function saveMonth(token, ym, dept, payload) {
+  const me = verify_(token);
+  allow_(me, dept);
+
+  const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) {
     throw new Error('他の方が保存中です。少し待ってからもう一度お試しください。');
   }
@@ -149,7 +280,6 @@ function saveMonth(ym, dept, payload) {
   try {
     const key = makeKey_(ym, dept);
     const json = JSON.stringify(payload);
-
     if (json.length > 45000) {
       throw new Error('データが大きすぎます。職員数を分けてご利用ください。');
     }
@@ -167,48 +297,46 @@ function saveMonth(ym, dept, payload) {
 
     writePlanSheet_(ym, dept, payload);
 
-    return { ok: true, at: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'HH:mm'), by: email };
-
+    return {
+      ok: true,
+      at: Utilities.formatDate(new Date(), 'Asia/Tokyo', 'HH:mm'),
+      by: me.name || me.role
+    };
   } finally {
     lock.releaseLock();
   }
 }
 
-
-/* ------------------------------------------------------------
-   人が読む用のシートを作り直します（1行＝1人1日）
-   ------------------------------------------------------------ */
 function writePlanSheet_(ym, dept, payload) {
   const sh = sheet_(PLAN_SHEET);
   const all = sh.getDataRange().getValues();
   const head = all[0];
+  const keep = all.slice(1).filter(function (r) {
+    return !(String(r[0]) === ym && String(r[1]) === dept);
+  });
 
-  /* 対象の年月×部署を取り除きます */
-  const keep = all.slice(1).filter(r => !(String(r[0]) === ym && String(r[1]) === dept));
-
-  /* 追加ぶんを作ります */
   const dow = ['日','月','火','水','木','金','土'];
   const parts = String(ym).split('.');
   const y = Number(parts[0]), m = Number(parts[1]);
   const add = [];
 
-  (payload.staff || []).forEach(st => {
+  (payload.staff || []).forEach(function (st) {
     const name = String(st.name || '').trim();
     if (!name) return;
     const days = st.days || {};
-    Object.keys(days).forEach(d => {
+    Object.keys(days).forEach(function (d) {
       const code = days[d];
       if (!code) return;
       const date = new Date(y, m - 1, Number(d));
-      add.push([
-        ym, dept, String(st.emp || ''), name,
+      add.push([ym, dept, String(st.emp || ''), name,
         Utilities.formatDate(date, 'Asia/Tokyo', 'yyyy-MM-dd'),
-        dow[date.getDay()], code, (payload.labels || {})[code] || '',
-      ]);
+        dow[date.getDay()], code, (payload.labels || {})[code] || '']);
     });
   });
 
-  add.sort((a, b) => (a[3] === b[3] ? (a[4] < b[4] ? -1 : 1) : (a[3] < b[3] ? -1 : 1)));
+  add.sort(function (a, b) {
+    return (a[3] === b[3]) ? (a[4] < b[4] ? -1 : 1) : (a[3] < b[3] ? -1 : 1);
+  });
 
   const out = [head].concat(keep, add);
   sh.clearContents();
@@ -221,18 +349,15 @@ function writePlanSheet_(ym, dept, payload) {
    補助
    ============================================================ */
 function sheet_(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getSheetByName(name);
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
   if (!sh) throw new Error('シート「' + name + '」がありません。setup() を実行してください。');
   return sh;
 }
 
-function makeKey_(ym, dept) {
-  return String(ym) + '|' + String(dept);
-}
+function makeKey_(ym, dept) { return String(ym) + '|' + String(dept); }
 
 function getEmail_() {
-  return Session.getActiveUser().getEmail() || '';
+  try { return Session.getActiveUser().getEmail() || ''; } catch (e) { return ''; }
 }
 
 function getConf_(item, fallback) {
@@ -245,22 +370,51 @@ function getConf_(item, fallback) {
   return fallback;
 }
 
-function isAdmin_(email) {
+function isAdminMail_(email) {
   if (!email) return false;
-  const raw = String(getConf_('管理者', ''));
-  const list = raw.split(/[,、\s]+/).map(s => s.trim().toLowerCase()).filter(String);
+  const raw = String(getConf_('管理者メール', ''));
+  const list = raw.split(/[,、\s]+/).map(function (s) { return s.trim().toLowerCase(); })
+                  .filter(String);
   return list.indexOf(email.toLowerCase()) >= 0;
 }
 
 function getDepartments_() {
   const raw = String(getConf_('部署', DEFAULT_DEPARTMENTS.join(',')));
-  const list = raw.split(/[,、]/).map(s => s.trim()).filter(String);
+  const list = raw.split(/[,、]/).map(function (s) { return s.trim(); }).filter(String);
   return list.length ? list : DEFAULT_DEPARTMENTS;
 }
 
-function logAccess_() {
+/** 合言葉の一覧を { 対象: 合言葉 } で返します */
+function getPasscodes_() {
+  const map = {};
+  const rows = sheet_(PASS_SHEET).getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const k = String(rows[i][0]).trim();
+    const v = String(rows[i][1]).trim();
+    if (k && v) map[k] = v;
+  }
+  return map;
+}
+
+/** その部署に登録済みの職員名を返します（氏名選択用） */
+function rosterNames_(dept) {
+  const names = [];
   try {
-    const email = getEmail_();
-    sheet_(LOG_SHEET).appendRow([new Date(), email, isAdmin_(email) ? '管理者' : '職員']);
+    const rows = sheet_(DATA_SHEET).getDataRange().getValues();
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][2]) !== String(dept)) continue;
+      const d = JSON.parse(rows[i][3]);
+      (d.staff || []).forEach(function (s) {
+        const n = String(s.name || '').trim();
+        if (n && names.indexOf(n) < 0) names.push(n);
+      });
+    }
+  } catch (e) { /* データがなければ空で返します */ }
+  return names.sort();
+}
+
+function logAccess_(result, dept, name, note) {
+  try {
+    sheet_(LOG_SHEET).appendRow([new Date(), result, dept || '', name || '', note || '']);
   } catch (e) { /* ログは失敗しても処理を止めません */ }
 }
