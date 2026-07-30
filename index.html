@@ -721,7 +721,7 @@ const catMap = Object.fromEntries(CATEGORIES.map(c => [c.code, c]));
 const DEMO_MODE = true;
 
 /* 確認用バージョン。更新のたびに書き換えてください。 */
-const VERSION = 'v3.1';
+const VERSION = 'v3.2';
 const RELEASED = '2026-07-30';
 
 /* 部署の一覧。増減する場合はこの配列を編集してください。 */
@@ -1053,6 +1053,10 @@ function renderGrid(){
     inp.disabled = !editable;
     inp.setAttribute('aria-label', (i+1) + '人目の氏名');
     inp.addEventListener('input', e => { st.name = e.target.value; markDirty(); refresh(); });
+    inp.addEventListener('change', () => {
+      if(!canEdit()) return;
+      if(applyDefaultShift(st)){ markDirty(); render(); }
+    });
     wrap.appendChild(inp);
     if(editable){
       const del = document.createElement('button');
@@ -1338,6 +1342,34 @@ function refresh(){
   }
   $('statFilled').querySelector('.num').textContent = filled;
   $('statBlank').querySelector('.num').textContent = blank;
+}
+
+
+/* ============================================================
+   氏名を入れたときの初期設定
+   ------------------------------------------------------------
+   まだ1日も入力されていない行に氏名が入ると、
+   平日を「出勤」、土日祝を「公休」で埋めます。
+   すでに入力がある行には触れません。
+   自動で埋めたくない場合は AUTO_FILL_ON_NAME を false にしてください。
+   ============================================================ */
+const AUTO_FILL_ON_NAME = true;
+const FILL_WEEKDAY = '出';   /* 平日に入れる記号 */
+const FILL_HOLIDAY = '公';   /* 土日祝に入れる記号 */
+
+function applyDefaultShift(st){
+  if(!AUTO_FILL_ON_NAME) return false;
+  if(!String(st.name || '').trim()) return false;
+
+  const dm = daysInMonth(state.year, state.month);
+  /* すでに1日でも入力されていれば何もしません */
+  for(let d = 1; d <= dm; d++){ if(st.days[d]) return false; }
+
+  for(let d = 1; d <= dm; d++){
+    const cls = dayClass(state.year, state.month, d);
+    st.days[d] = (cls === 'sat' || cls === 'sun') ? FILL_HOLIDAY : FILL_WEEKDAY;
+  }
+  return true;
 }
 
 /* ============================================================
@@ -2209,9 +2241,9 @@ $('impRun').addEventListener('click', () => {
     }
 
     const st = state.staff[i];
-    /* 勤務予定（st.days）には一切触れません */
+    /* すでに入力済みの勤務予定には一切触れません */
     if(!String(st.emp||'').trim() && pp.emp){ st.emp = pp.emp; filledEmp++; }
-    if(!String(st.name||'').trim() && disp){ st.name = disp; filledName++; }
+    if(!String(st.name||'').trim() && disp){ st.name = disp; filledName++; applyDefaultShift(st); }
     if(!roster) actuals[staffKey(st)] = pp.days;
     matched++;
   });
