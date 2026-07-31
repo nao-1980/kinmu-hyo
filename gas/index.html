@@ -125,6 +125,7 @@ button,select,input,textarea{font-family:inherit}
 .banner.show{display:block}
 .banner.admin{background:#fdf4e8;border-color:var(--warn);color:var(--warn)}
 .banner.closed{background:#f7eaea;border-color:var(--alert);color:var(--alert)}
+.banner.carry{background:#eaf3ec;border-color:#1d7a45;color:#1a5f38}
 .banner b{font-weight:700}
 
 /* ---------- 見出し ---------- */
@@ -140,7 +141,7 @@ th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);pad
 thead th{background:var(--navy-soft);position:sticky;top:0;z-index:30;font-weight:500;color:var(--navy);height:26px}
 #grid thead tr:nth-child(2) th{top:26px}
 .c-no{width:34px;min-width:34px}
-.c-name{width:120px;min-width:120px}
+.c-name{width:120px;min-width:120px;max-width:120px}
 .c-day{width:38px;min-width:38px}
 .stick1{position:sticky;left:0;z-index:40;background:var(--paper)}
 .stick2{position:sticky;left:34px;z-index:40;background:var(--paper);border-right:2px solid var(--line-strong)}
@@ -157,13 +158,14 @@ tbody tr{height:44px}
 .namecell{padding:2px 0}
 .namewrap{display:flex;align-items:center;gap:2px}
 .namecell input.nm{
-  flex:1;min-width:0;border:0;background:transparent;padding:3px 4px 2px 8px;
+  flex:1;min-width:0;width:100%;border:0;background:transparent;padding:3px 4px 2px 8px;
   font-size:13px;font-weight:500;color:var(--ink);text-align:left;
+  text-overflow:ellipsis;
 }
 .namecell input.emp{
-  width:100%;border:0;background:transparent;padding:0 8px 3px;
+  width:100%;min-width:0;border:0;background:transparent;padding:0 8px 3px;
   font-size:10.5px;color:var(--ink-mute);text-align:left;letter-spacing:.04em;
-  font-variant-numeric:tabular-nums;
+  font-variant-numeric:tabular-nums;text-overflow:ellipsis;
 }
 .namecell input:focus{outline:2px solid var(--navy);outline-offset:-2px}
 .namecell input:disabled{-webkit-text-fill-color:currentColor;opacity:1}
@@ -452,6 +454,7 @@ tr.actrow td.cell{cursor:default}
   border:2px dashed var(--line-strong);padding:18px 16px;text-align:center;
   color:var(--ink-mute);font-size:13px;cursor:pointer;background:#fafbfc;
 }
+.drop.busy{border-style:solid;color:var(--navy);cursor:default}
 .drop:hover,.drop.over{border-color:var(--navy);background:var(--navy-soft);color:var(--navy)}
 .drop b{display:block;font-size:14px;color:var(--ink);margin-bottom:4px}
 .maprow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
@@ -492,6 +495,20 @@ tr.actrow td.cell{cursor:default}
   width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line-strong);
   background:#fff;color:var(--ink);border-radius:3px;
 }
+.pwwrap{position:relative;display:block}
+.pwwrap input{padding-right:46px}
+.pwwrap input[type="text"]{letter-spacing:.08em;font-family:'Courier New',monospace}
+.eye{
+  position:absolute;top:50%;right:6px;transform:translateY(-50%);
+  width:34px;height:34px;border:0;background:transparent;cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center;border-radius:3px;color:var(--ink-mute);
+}
+.eye:hover{background:#eef1f5;color:var(--navy)}
+.eye:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
+.eye svg{width:21px;height:21px;fill:currentColor;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.eye .e-on{stroke:none}
+.eye .e-off{fill:none;opacity:1}
+.eye.shown .e-off{opacity:0}
 .lf select:focus,.lf input:focus{outline:2px solid var(--navy);outline-offset:-1px;border-color:var(--navy)}
 .lbtn{
   width:100%;padding:13px;background:var(--navy);color:#fff;border:0;border-radius:3px;
@@ -535,11 +552,16 @@ tr.actrow td.cell{cursor:default}
   .sec-head{margin:18px 10px 6px}
   .sheet{margin:0 10px}
   #gridWrap{max-height:66vh}
-  .c-no{width:26px;min-width:26px}
-  .c-name{width:92px;min-width:92px}
-  .stick2{left:26px}
-  .c-rl{width:28px;min-width:28px}
-  .stick3{left:118px}
+  .c-no{width:22px;min-width:22px}
+  .c-name{width:78px;min-width:78px;max-width:78px}
+  .stick2{left:22px}
+  .namecell input.nm{font-size:11.5px;padding:3px 2px 2px 5px}
+  .namecell input.emp{font-size:9px;padding:0 5px 3px;letter-spacing:0}
+  .delbtn{flex:0 0 16px;width:16px;height:16px;font-size:12px;margin-right:2px}
+  .rowno{font-size:10px}
+  thead th{font-size:11px}
+  .c-rl{width:24px;min-width:24px}
+  .stick3{left:100px}
   .modal.wide{width:100%}
   .modal{max-height:calc(100vh - 16px)}
   .backdrop{padding:8px}
@@ -551,7 +573,7 @@ tr.actrow td.cell{cursor:default}
   .pitem .fl{flex:0 0 100%;order:3}
   .maprow{flex-wrap:wrap}
   .maprow label{flex:1 1 100%}
-  .c-day{width:42px;min-width:42px}
+  .c-day{width:36px;min-width:36px}
   tbody tr{height:50px}
   td.cell .val{min-height:49px;font-size:14px}
   .delbtn{opacity:1}
@@ -587,16 +609,24 @@ tr.actrow td.cell{cursor:default}
   <div class="lbox">
     <div class="lhead">
       <div class="ltitle">勤務表作成ツール</div>
-      <div class="lsub">部署と合言葉を入力してください</div>
+      <div class="lsub">部署とパスワードを入力してください</div>
     </div>
     <div class="lbody">
       <label class="lf"><span>部署</span><select id="loginDept"></select></label>
-      <label class="lf"><span>合言葉</span>
-        <input type="password" id="loginPass" autocomplete="off" placeholder="配布された合言葉">
+      <label class="lf"><span>パスワード</span>
+        <span class="pwwrap">
+          <input type="password" id="loginPass" autocomplete="off" placeholder="パスワード">
+          <button type="button" class="eye" id="eyeBtn" aria-label="パスワードを表示する" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="e-on" d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-7A2.5 2.5 0 1 0 12 14.5 2.5 2.5 0 0 0 12 9.5Z"/>
+              <path class="e-off" d="M3.5 3.5 20.5 20.5" />
+            </svg>
+          </button>
+        </span>
       </label>
       <div class="lerr" id="loginErr" hidden></div>
       <button class="lbtn" id="loginBtn">ログイン</button>
-      <p class="lnote">合言葉が分からない場合は、部署の管理者にご確認ください。</p>
+      <p class="lnote">パスワードが分からない場合は、部署の管理者にご確認ください。</p>
     </div>
   </div>
 </div>
@@ -698,7 +728,7 @@ tr.actrow td.cell{cursor:default}
         クリックするか、ここにドラッグしてください<br>
         <small>CSV：UTF-8 / Shift-JIS 対応　｜　PDF：ハーモスの「日次勤怠」</small>
       </div>
-      <input type="file" id="impFile" accept=".csv,.pdf,text/csv,application/pdf" hidden>
+      <input type="file" id="impFile" accept=".csv,.pdf,text/csv,application/pdf" multiple hidden>
       <div id="impMap" hidden>
         <div class="modes">
           <label class="ck"><input type="radio" name="impMode" value="roster" checked>
@@ -809,7 +839,7 @@ const DEMO_MODE = false;
 const GAS_MODE  = true;   /* スプレッドシートに保存します */
 
 /* 確認用バージョン。更新のたびに書き換えてください。 */
-const VERSION = 'v4.2';
+const VERSION = 'v5.2';
 const RELEASED = '2026-07-30';
 
 /* 部署の一覧。増減する場合はこの配列を編集してください。 */
@@ -969,7 +999,18 @@ function isTracked(){ return lockLevel() === 'admin' && role === 'admin'; }
 function paintBanner(){
   const b = $('banner'), lv = lockLevel();
   b.className = 'banner';
-  if(lv === 'open'){ b.textContent = ''; return; }
+  if(lv === 'open'){
+    if(state.carriedFrom){
+      b.classList.add('show','carry');
+      b.innerHTML = '<b>' + state.carriedFrom.replace('.', '年') + '月の名簿を引き継ぎました。</b>' +
+        '勤務予定は「平日＝出勤／土日祝＝公休」で下書きしてあります。実際のシフトに合わせて修正してください。' +
+        '<br>この内容は、どこか1か所でも変更すると保存されます。'  +
+        '（不要な方は氏名欄の × で削除できます）';
+    }else{
+      b.textContent = '';
+    }
+    return;
+  }
   if(lv === 'admin'){
     b.classList.add('show','admin');
     b.innerHTML = role === 'admin'
@@ -1136,7 +1177,7 @@ function renderGrid(){
     const wrap = document.createElement('div');
     wrap.className = 'namewrap';
     const inp = document.createElement('input');
-    inp.type = 'text'; inp.className = 'nm';
+    inp.type = 'text'; inp.className = 'nm'; inp.size = 1;
     inp.value = st.name || ''; inp.placeholder = '氏名';
     inp.disabled = !editable;
     inp.setAttribute('aria-label', (i+1) + '人目の氏名');
@@ -1157,7 +1198,7 @@ function renderGrid(){
     tdName.appendChild(wrap);
 
     const emp = document.createElement('input');
-    emp.type = 'text'; emp.className = 'emp';
+    emp.type = 'text'; emp.className = 'emp'; emp.size = 1;
     emp.value = st.emp || ''; emp.placeholder = '社員番号';
     emp.disabled = !editable;
     emp.setAttribute('aria-label', (i+1) + '人目の社員番号');
@@ -1988,10 +2029,11 @@ $('repClear').addEventListener('click', () => {
 /* ============================================================
    ハーモスCSVの取り込み
    ============================================================ */
-let impRows = null, impHeader = null;
+let impRows = null, impHeader = null, impFileLabel = '';
 
 function openImport(){
-  impRows = null; impHeader = null;
+  impRows = null; impHeader = null; impFileLabel = '';
+  resetDropText();
   $('impMap').hidden = true;
   $('impErr').hidden = true;
   $('impRun').disabled = true;
@@ -2019,51 +2061,152 @@ $('impDrop').addEventListener('dragleave', () => $('impDrop').classList.remove('
 $('impDrop').addEventListener('drop', e => {
   e.preventDefault();
   $('impDrop').classList.remove('over');
-  const f = e.dataTransfer.files[0];
-  if(f) readImportFile(f);
+  if(e.dataTransfer.files.length) readImportFiles(e.dataTransfer.files);
 });
 $('impFile').addEventListener('change', e => {
-  const f = e.target.files[0];
-  if(f) readImportFile(f);
+  if(e.target.files.length) readImportFiles(e.target.files);
+  e.target.value = '';   /* 同じファイルを選び直せるように */
 });
 
 let impPdf = null;   /* PDFから読み取った結果 */
 
-function readImportFile(file){
-  impPdf = null;
-  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-  const r = new FileReader();
+function resetDropText(){
+  $('impDrop').classList.remove('busy');
+  $('impDrop').innerHTML =
+    '<b>CSV または PDF を選択</b>' +
+    'クリックするか、ここにドラッグしてください<br>' +
+    '複数のファイルをまとめて選べます（CSVは UTF-8 / Shift-JIS 対応）';
+}
 
-  r.onload = async () => {
-    try{
-      if(isPdf){
-        $('impErr').hidden = false;
-        $('impErr').style.background = '#eef1f5';
-        $('impErr').style.color = 'var(--ink-mute)';
-        $('impErr').textContent = 'PDFを読み取っています…';
-        const pages = await parsePdf(r.result);
-        const withDays = pages.filter(p => Object.keys(p.days).length > 0);
-        if(!withDays.length) throw new Error('勤務データを読み取れませんでした。CSVでの取り込みをお試しください');
-        impPdf = withDays;
-        impRows = null; impHeader = null;
-        showPdfSummary(file.name, pages, withDays);
-      }else{
-        const text = decodeCsv(r.result);
-        const rows = parseCsv(text);
-        if(rows.length < 2) throw new Error('データが見つかりません');
-        impHeader = rows[0].map(v => String(v).trim());
-        impRows = rows.slice(1);
-        buildMapping(file.name);
+function impError(msg){
+  resetDropText();
+  $('impErr').hidden = false;
+  $('impErr').style.background = '';
+  $('impErr').style.color = '';
+  $('impErr').textContent = msg;
+  $('impRun').disabled = true;
+}
+
+function impNotes(list){
+  if(!list || !list.length) return;
+  $('impErr').hidden = false;
+  $('impErr').style.background = '#fdf4e8';
+  $('impErr').style.color = 'var(--warn)';
+  $('impErr').textContent = list.join('\n');
+}
+
+/* 1ファイルを読み取ります（CSV / PDF どちらにも対応） */
+function readOneFile(file){
+  return new Promise(resolve => {
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+    const r = new FileReader();
+    r.onload = async () => {
+      try{
+        if(isPdf){
+          const pages = await parsePdf(r.result);
+          const withDays = pages.filter(p => Object.keys(p.days).length > 0);
+          resolve({ name:file.name, kind:'pdf', pages:pages, withDays:withDays });
+        }else{
+          const rows = parseCsv(decodeCsv(r.result));
+          if(rows.length < 2) throw new Error('データ行がありません');
+          resolve({ name:file.name, kind:'csv',
+                    header:rows[0].map(v => String(v).trim()), rows:rows.slice(1) });
+        }
+      }catch(e){
+        resolve({ name:file.name, error:(e && e.message) ? e.message : '読み取れませんでした' });
       }
-    }catch(err){
-      $('impErr').hidden = false;
-      $('impErr').style.background = '';
-      $('impErr').style.color = '';
-      $('impErr').textContent = '読み込めませんでした：' + err.message;
-      $('impRun').disabled = true;
+    };
+    r.onerror = () => resolve({ name:file.name, error:'読み込めませんでした' });
+    r.readAsArrayBuffer(file);
+  });
+}
+
+const sameHeader = (a, b) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
+
+/* 複数ファイルをまとめて読み取り、1つのデータに結合します */
+function readImportFiles(fileList){
+  const files = Array.from(fileList).filter(f => /\.(csv|pdf)$/i.test(f.name));
+  if(!files.length){ impError('CSV または PDF を選択してください。'); return; }
+
+  const hasPdf = files.some(f => /\.pdf$/i.test(f.name));
+  const hasCsv = files.some(f => /\.csv$/i.test(f.name));
+  if(hasPdf && hasCsv){
+    impError('CSV と PDF は分けて取り込んでください。');
+    return;
+  }
+
+  impPdf = null; impRows = null; impHeader = null;
+  $('impErr').hidden = true;
+  $('impDrop').classList.add('busy');
+  $('impDrop').innerHTML = '<b>読み込み中…</b>' + files.length + ' ファイル' +
+    (hasPdf ? '（PDFは時間がかかります）' : '');
+
+  Promise.all(files.map(readOneFile)).then(results => {
+    const ok  = results.filter(r => !r.error);
+    const bad = results.filter(r => r.error);
+
+    if(!ok.length){
+      impError('読み込めませんでした：\n' +
+        bad.map(r => '・' + r.name + '（' + r.error + '）').join('\n'));
+      return;
     }
-  };
-  r.readAsArrayBuffer(file);
+
+    const notes = bad.map(r => r.name + '：' + r.error);
+    impFileLabel = (files.length === 1)
+      ? ok[0].name
+      : files.length + 'ファイル（' + ok[0].name + ' ほか）';
+
+    if(hasPdf) finishPdf(ok, notes);
+    else       finishCsv(ok, notes);
+  });
+}
+
+/* PDFを結合します */
+function finishPdf(ok, notes){
+  const pages = [], withDays = [];
+  ok.forEach(r => {
+    (r.pages || []).forEach(p => pages.push(p));
+    (r.withDays || []).forEach(p => withDays.push(p));
+  });
+
+  if(!withDays.length){
+    impError('勤務データを読み取れませんでした。CSVでの取り込みをお試しください。');
+    return;
+  }
+
+  impPdf = withDays;
+  resetDropText();
+  $('impDrop').innerHTML = '<b>' + ok.length + ' ファイルを読み込みました</b>選び直すにはクリック';
+  showPdfSummary(impFileLabel, pages, withDays);
+  impNotes(notes);
+}
+
+/* CSVを結合します（見出しが違う場合は列名で並べ替えます） */
+function finishCsv(ok, notes){
+  impHeader = ok[0].header;
+  impRows = [];
+
+  ok.forEach(r => {
+    if(sameHeader(r.header, impHeader)){
+      impRows = impRows.concat(r.rows);
+      return;
+    }
+    const idx = impHeader.map(h => r.header.indexOf(h));
+    if(idx.filter(i => i >= 0).length < 2){
+      notes.push(r.name + '：列が一致しないため除外しました');
+      return;
+    }
+    impRows = impRows.concat(r.rows.map(row => idx.map(i => i >= 0 ? row[i] : '')));
+    notes.push(r.name + '：列の並びを合わせました');
+  });
+
+  if(!impRows.length){ impError('取り込める行がありませんでした。'); return; }
+
+  resetDropText();
+  $('impDrop').innerHTML = '<b>' + ok.length + ' ファイル ／ ' + impRows.length + ' 行</b>' +
+    '選び直すにはクリック';
+  buildMapping(impFileLabel, notes);
 }
 
 /* PDFは列の指定が不要なので、内容の要約だけ出します */
@@ -2091,14 +2234,11 @@ function showPdfSummary(fileName, pages, withDays){
     '</div>' + warn;
   $('impPrev').style.maxHeight = 'none';
 
-  $('impErr').hidden = true;
-  $('impErr').style.background = '';
-  $('impErr').style.color = '';
   $('impRun').textContent = '照合する';
   $('impRun').disabled = false;
 }
 
-function buildMapping(fileName){
+function buildMapping(fileName, notes){
   const opts = '<option value="-1">（使わない）</option>' +
     impHeader.map((h,i) => '<option value="' + i + '">' + (i+1) + '. ' + (h || '（無題）') + '</option>').join('');
   ['colEmp','colName','colDate','colKind','colDept'].forEach(id => $(id).innerHTML = opts);
@@ -2110,12 +2250,17 @@ function buildMapping(fileName){
   $('colDept').value = guessCol(impHeader, ['部門名','拠点名','部署','所属']);
   $('impDeptName').textContent = state.dept;
 
-  /* 先頭5行のプレビュー */
+  /* 先頭5行のプレビュー（読み込んだ全ファイルの合計から） */
   const prev = impRows.slice(0,5);
   $('impPrev').innerHTML = '<table><thead><tr>' +
     impHeader.map(h => '<th>' + (h || '—') + '</th>').join('') + '</tr></thead><tbody>' +
     prev.map(r => '<tr>' + impHeader.map((_,i) => '<td>' + (r[i] || '') + '</td>').join('') + '</tr>').join('') +
     '</tbody></table>';
+
+  if(notes && notes.length){
+    $('impErr').hidden = false;
+    $('impErr').textContent = notes.join('\n');
+  }
 
   $('impMap').hidden = false;
   $('impRun').disabled = false;
@@ -2475,6 +2620,7 @@ function doSave(){
   google.script.run
     .withSuccessHandler(res => {
       saving = false;
+      if(state.carriedFrom){ state.carriedFrom = null; paintBanner(); }
       setStatus('', '保存しました ' + res.at);
       if(pending){ pending = false; doSave(); }
     })
@@ -2507,6 +2653,9 @@ function loadFromSheet(){
       state.history  = (d && Array.isArray(d.history)) ? d.history : [];
       state.actuals  = (d && d.actuals) || {};
       state.actualsMeta = (d && d.actualsMeta) || null;
+      state.carriedFrom = (d && d.carriedFrom) || null;
+      /* 引き継いだ月は、平日=出勤／土日祝=公休 で下書きします */
+      if(state.carriedFrom) state.staff.forEach(st => applyDefaultShift(st));
       state.staff.forEach(x => {
         if(typeof x.name !== 'string') x.name = '';
         if(typeof x.emp !== 'string') x.emp = '';
@@ -2515,8 +2664,22 @@ function loadFromSheet(){
       repOpen.clear();
       repFilter = 'all';
       loading = false;
+
+      /* 前月から引き継いだ場合は、基本パターンも入れておきます
+         （平日＝出勤／土日祝＝公休。すでに入力がある行には触れません） */
+      let filled = 0;
+      if(state.carriedFrom){
+        state.staff.forEach(st => { if(applyDefaultShift(st)) filled++; });
+      }
+
       render();
-      setStatus('', d ? '読み込みました' : '新しい勤務表です');
+
+      if(state.carriedFrom && filled){
+        setStatus('', '引き継ぎました');
+        markDirty();          /* この内容をそのまま保存します */
+      }else{
+        setStatus('', d ? '読み込みました' : '新しい勤務表です');
+      }
     })
     .withFailureHandler(err => {
       loading = false;
@@ -2684,7 +2847,22 @@ $('dept').addEventListener('change', e => {
 
 $('role').addEventListener('change', e => { role = e.target.value; render(); });
 
-$('verLabel').textContent = '確認用バージョン ' + VERSION + '（' + RELEASED + '）';
+function paintVersion(sv){
+  const el = $('verLabel');
+  if(!el) return;
+  if(!sv){
+    el.textContent = 'バージョン ' + VERSION + '（' + RELEASED + '）';
+    return;
+  }
+  if(sv === VERSION){
+    el.textContent = 'バージョン ' + VERSION + '（画面・サーバーとも ' + sv + '）';
+    el.style.color = '';
+    return;
+  }
+  el.innerHTML = '<b style="color:#c8322f">サーバー側が古いバージョンです（画面 ' + VERSION +
+    ' ／ サーバー ' + sv + '）。デプロイ → デプロイを管理 → 新バージョン で更新してください。</b>';
+}
+paintVersion(null);
 applyMode();
 legend();
 render();
@@ -2692,16 +2870,20 @@ render();
 /* ============================================================
    ログイン
    ------------------------------------------------------------
-   合言葉でサーバーから受け取ったトークンを、以降の
+   パスワードでサーバーから受け取ったトークンを、以降の
    すべての通信に添えます。トークンがないとサーバー側で
    読み書きが拒否されます。
    ============================================================ */
 let TOKEN = null;
 let ME = { role:'', dept:'', name:'' };
+let startApplied = false;
 
 function showLogin(depts){
   $('loginDept').innerHTML = (depts || [])
     .map(d => '<option value="' + d + '">' + d + '</option>').join('');
+  $('loginPass').type = 'password';
+  $('eyeBtn').classList.remove('shown');
+  $('eyeBtn').setAttribute('aria-pressed', 'false');
   $('login').hidden = false;
   $('loginPass').focus();
 }
@@ -2715,6 +2897,18 @@ function loginFail(msg){
 
 function applyAuth(a){
   TOKEN = a.token;
+  paintVersion(a.serverVersion);
+
+  /* 最初に表示する月（設定シートで 当月 / 翌月 / 前月 を選べます） */
+  if(!startApplied){
+    startApplied = true;
+    const off = Number(a.startOffset || 0);
+    const t = new Date(state.year, state.month - 1 + off, 1);
+    state.year = t.getFullYear();
+    state.month = t.getMonth() + 1;
+    $('year').value = state.year;
+    $('month').value = state.month;
+  }
   ME = { role: a.role, dept: a.dept || '', name: a.name || '' };
   role = a.role;
   $('role').value = role;
@@ -2740,6 +2934,16 @@ function paintWhoami(){
   $('roleLabel').textContent = '権限';
   $('roleVal').textContent = ME.role === 'admin' ? '管理者' : '職員';
 }
+
+$('eyeBtn').addEventListener('click', () => {
+  const inp = $('loginPass');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  $('eyeBtn').classList.toggle('shown', show);
+  $('eyeBtn').setAttribute('aria-pressed', show ? 'true' : 'false');
+  $('eyeBtn').setAttribute('aria-label', show ? 'パスワードを隠す' : 'パスワードを表示する');
+  inp.focus();
+});
 
 $('loginBtn').addEventListener('click', doLogin);
 $('loginPass').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
@@ -2803,6 +3007,7 @@ $('nameBtn').addEventListener('click', () => {
 /* --- 起動 --- */
 google.script.run
   .withSuccessHandler(a => {
+    paintVersion(a.serverVersion);
     if(a.authed){ applyAuth(a); }
     else { loading = false; showLogin(a.departments); }
   })
