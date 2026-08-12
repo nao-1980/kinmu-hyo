@@ -803,6 +803,7 @@ const CATEGORIES = [
   { code:'祝出', label:'出勤（土日祝）',  group:'work',  work:1   },
   { code:'早',   label:'出勤（早番）',    group:'work',  work:1   },
   { code:'振出', label:'振出',           group:'work',  work:1   },
+  { code:'早退', label:'早退',           group:'work',  work:0.5, same:'出' },
   { code:'公',   label:'公休',           group:'off',   work:0   },
   { code:'欠',   label:'欠勤',           group:'other', work:0   },
   { code:'振',   label:'振休',           group:'off',   work:0   },
@@ -819,7 +820,7 @@ const CATEGORIES = [
 ];
 
 /* 勤務実績日数の並び順（ハーモスのプルダウン順に合わせています） */
-const SUM_ORDER = ['出','祝出','早','振出','公','欠','振','前振','後振',
+const SUM_ORDER = ['出','祝出','早','振出','早退','公','欠','振','前振','後振',
                    '有','前有','後有','夏','前夏','後夏','特','慶弔'];
 
 const MIN_STAFF_PER_DAY = 2;
@@ -839,7 +840,7 @@ const DEMO_MODE = false;
 const GAS_MODE  = true;   /* スプレッドシートに保存します */
 
 /* 確認用バージョン。更新のたびに書き換えてください。 */
-const VERSION = 'v5.2';
+const VERSION = 'v5.3';
 const RELEASED = '2026-07-30';
 
 /* 部署の一覧。増減する場合はこの配列を編集してください。 */
@@ -1040,13 +1041,16 @@ const hasActuals = () => state.actualsMeta && Object.keys(state.actuals||{}).len
 /* その職員の実績（日→区分） */
 const actualOf = st => (state.actuals || {})[staffKey(st)] || null;
 
+/* 照合するときに同じとみなす区分（例：早退はハーモス側では「出勤」）*/
+const equivOf = c => (catMap[c] && catMap[c].same) ? catMap[c].same : (c || '');
+
 /* 判定：miss=実績なし / extra=予定なし / diff=相違 / ok=一致 / null=どちらも空 */
 function judge(plan, act){
   const p = plan || '', a = act || '';
   if(!p && !a) return null;
   if(p && !a) return 'miss';
   if(!p && a) return 'extra';
-  return p === a ? 'ok' : 'diff';
+  return equivOf(p) === equivOf(a) ? 'ok' : 'diff';
 }
 
 const JUDGE_LABEL = { miss:'実績なし', extra:'予定なし', diff:'相違' };
